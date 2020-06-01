@@ -15,6 +15,7 @@
 // An example of sending OpenCV webcam frames into a MediaPipe graph.
 // This example requires a linux computer and a GPU with EGL support drivers.
 #include <cstdlib>
+#include <string>
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
@@ -140,11 +141,34 @@ DEFINE_string(output_video_path, "",
     if (!poller_landmark.Next(&landmark_packet)) break;
     std::unique_ptr<mediapipe::ImageFrame> output_frame;
 
+    float index_pointer_x, index_pointer_y;
+
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
-    //for (const auto& landmark : output_landmarks) {
-          std::cout << output_landmarks.DebugString();
-          std::cout << "\n\n\n\n\n-------------------------------------\n\n\n\n\n";
-    //}
+    /*
+    for (int i=0; i< output_landmarks.landmark_size(); i++) {
+          const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
+          std::cout << "Landmark number: "<< i << "   x coordinate: " << landmark.x() << "   y coordinate: " << landmark.y() << "  z coordinate: " << landmark.z() << "\n";  
+    }
+    std::cout << "\n\n\n-----------------------------------------------------\n\n\n";
+    //top-left - (0,0)
+    //top-right - (1,0)
+    */
+
+    // Landmark 8 is tip of index finger
+    index_pointer_x = output_landmarks.landmark(8).x();
+    index_pointer_y = output_landmarks.landmark(8).y();
+    
+    // Hardocded resolution
+    int screen_width = 3840;
+    int screen_height = 2160;
+
+    int scaled_pointer_x = index_pointer_x * screen_width;
+    int scaled_pointer_y = index_pointer_y * screen_height;
+
+    //std::cout << "Scaled Cursor position : " << scaled_pointer_x << "," << scaled_pointer_y <<"\n";    
+
+    std::string cmd = "xdotool mousemove " + std::to_string(scaled_pointer_x) + " " + std::to_string(scaled_pointer_y);
+    system(cmd.c_str());
 
     // Convert GpuBuffer to ImageFrame.
     MP_RETURN_IF_ERROR(gpu_helper.RunInGlContext(
