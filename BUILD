@@ -1,17 +1,3 @@
-# Copyright 2019 The MediaPipe Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 licenses(["notice"])  # Apache 2.0
 
 #package(default_visibility = ["//mediapipe/examples:__subpackages__"])
@@ -23,7 +9,24 @@ cc_binary(
     deps = [
         "//gestures-mediapipe:hand_tracking_landmarks",
         "//mediapipe/graphs/hand_tracking:mobile_calculators",
+        ":zeromq",
     ],
+)
+
+cc_proto_library(
+    name = "landmarkList_cc_proto",
+    deps = [":landmarkList_proto"],
+)
+
+proto_library(
+    name = "landmarkList_proto",
+    srcs = ["proto/landmarkList.proto"],
+)
+
+cc_import(
+    name = "zeromq",
+    hdrs = ["zmq.hpp"],
+    shared_library = "libzmq.so",
 )
 
 # Linux only.
@@ -34,6 +37,7 @@ cc_library(
     name = "hand_tracking_landmarks",
     srcs = ["hand_tracking_landmarks.cc"],
     deps = [
+        ":landmarkList_cc_proto",
         "//mediapipe/framework/formats:landmark_cc_proto",
         "//mediapipe/framework:calculator_framework",
         "//mediapipe/framework/formats:image_frame",
@@ -50,4 +54,9 @@ cc_library(
         "//mediapipe/gpu:gpu_shared_data_internal",
     ],
 )
+
+
+
+
+
 

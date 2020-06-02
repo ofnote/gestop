@@ -32,6 +32,8 @@
 #include "mediapipe/gpu/gpu_shared_data_internal.h"
 
 #include "mediapipe/framework/formats/landmark.pb.h"
+#include <zmq.hpp>
+#include "gestures-mediapipe/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
@@ -96,6 +98,10 @@ DEFINE_string(output_video_path, "",
             graph.AddOutputStreamPoller(kLandmarksStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
+  zmq::context_t ctx;
+  zmq::socket_t sock(ctx, zmq::socket_type::push);
+  sock.bind("tcp://127.0.0.1:5556");
+
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
   while (grab_frames) {
@@ -141,9 +147,21 @@ DEFINE_string(output_video_path, "",
     if (!poller_landmark.Next(&landmark_packet)) break;
     std::unique_ptr<mediapipe::ImageFrame> output_frame;
 
-    float index_pointer_x, index_pointer_y;
-
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
+    
+    hand_tracking::LandmarkList landmarks;
+    for (int i=0; i< output_landmarks.landmark_size(); i++) {
+          //const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
+          hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();
+          l->set_x(output_landmarks.landmark(i).x());
+          l->set_y(output_landmarks.landmark(i).y());
+          l->set_z(output_landmarks.landmark(i).z());
+          //std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";  
+    }
+    std::string output;
+    landmarks.SerializeToString(&output);
+    sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
+
     /*
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
           const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
@@ -153,10 +171,10 @@ DEFINE_string(output_video_path, "",
     //top-left - (0,0)
     //top-right - (1,0)
     */
-
+/*
     // Landmark 8 is tip of index finger
-    index_pointer_x = output_landmarks.landmark(8).x();
-    index_pointer_y = output_landmarks.landmark(8).y();
+    float index_pointer_x = output_landmarks.landmark(8).x();
+    float index_pointer_y = output_landmarks.landmark(8).y();
     
     // Hardocded resolution
     int screen_width = 3840;
@@ -165,11 +183,11 @@ DEFINE_string(output_video_path, "",
     int scaled_pointer_x = index_pointer_x * screen_width;
     int scaled_pointer_y = index_pointer_y * screen_height;
 
-    //std::cout << "Scaled Cursor position : " << scaled_pointer_x << "," << scaled_pointer_y <<"\n";    
+    std::cout << "Scaled Cursor position : " << scaled_pointer_x << "," << scaled_pointer_y <<"\n";    
 
     std::string cmd = "xdotool mousemove " + std::to_string(scaled_pointer_x) + " " + std::to_string(scaled_pointer_y);
     system(cmd.c_str());
-
+*/
     // Convert GpuBuffer to ImageFrame.
     MP_RETURN_IF_ERROR(gpu_helper.RunInGlContext(
         [&packet, &output_frame, &gpu_helper]() -> ::mediapipe::Status {
