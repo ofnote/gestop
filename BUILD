@@ -39,6 +39,7 @@ cc_library(
     deps = [
         ":landmarkList_cc_proto",
         "//mediapipe/framework/formats:landmark_cc_proto",
+        "//mediapipe/framework/formats:classification_cc_proto",
         "//mediapipe/framework:calculator_framework",
         "//mediapipe/framework/formats:image_frame",
         "//mediapipe/framework/formats:image_frame_opencv",

@@ -32,12 +32,14 @@
 #include "mediapipe/gpu/gpu_shared_data_internal.h"
 
 #include "mediapipe/framework/formats/landmark.pb.h"
+#include "mediapipe/framework/formats/classification.pb.h"
 #include <zmq.hpp>
 #include "gestures-mediapipe/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kLandmarksStream[] = "hand_landmarks";
+constexpr char kHandednessStream[] = "handedness";
 constexpr char kWindowName[] = "MediaPipe";
 
 DEFINE_string(
@@ -96,6 +98,8 @@ DEFINE_string(output_video_path, "",
                    graph.AddOutputStreamPoller(kOutputStream));
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_landmark,
             graph.AddOutputStreamPoller(kLandmarksStream));
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
+            graph.AddOutputStreamPoller(kHandednessStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
   zmq::context_t ctx;
@@ -143,13 +147,19 @@ DEFINE_string(output_video_path, "",
     // Get the graph result packet, or stop if that fails.
     mediapipe::Packet packet;
     mediapipe::Packet landmark_packet;
+    mediapipe::Packet handedness_packet;
     if (!poller.Next(&packet)) break;
     if (!poller_landmark.Next(&landmark_packet)) break;
+    if (!poller_handedness.Next(&handedness_packet)) break;
     std::unique_ptr<mediapipe::ImageFrame> output_frame;
 
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
-    
+    auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
+    //std::cout << output_handedness.classification(0).label() << "\n";
+
     hand_tracking::LandmarkList landmarks;
+    landmarks.set_handedness(output_handedness.classification(0).index());
+    //std::cout <<  
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
           //const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
           hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();

@@ -9,4 +9,5 @@ message LandmarkList {
         float z = 3;
     }
     repeated Landmark landmark = 1;
+    bool handedness = 2;
 }
