@@ -11,7 +11,7 @@ def angleBetweenLines(x0,y0,x1,y1,x2,y2,handedness):
     if (handedness): return angle1-angle2
     else: return angle2-angle1
     
-# calculates the various angles from the joints of the hand, see images in README.md for more details
+# calculates the various angles from the joints of the hand, see `Useful Information` in README.md for more details
 # PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
 # DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
 # MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
@@ -87,7 +87,7 @@ while(True):
             fingerState.append('bent')
     print(fingerState)
     if(fingerState == ['straight','straight','bent','bent','bent',]):
-        pyautogui.click(interval=0.1)
+        pyautogui.click()
     
     #fingerAngle = [] 
     #for i in range(5):
