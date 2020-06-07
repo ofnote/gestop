@@ -10,7 +10,7 @@ The keypoint of the tip of the index finger is extracted in the Python script, a
 1. Mouse control -> Move index finger
 2. Mouse Down -> Thumb and index straight, other fingers bent (i.e. the hand gesture for the number 7)
 
-E.g. A left click can be performed by performing and the mouse down and gesture and immediately returning to the open hand to register a single left mouse button click.
+E.g. A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
 
 ### Requirements
 

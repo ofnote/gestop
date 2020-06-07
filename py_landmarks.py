@@ -61,7 +61,10 @@ landmarkList = landmarkList_pb2.LandmarkList()
 
 # maintain a buffer of most recent movements to smoothen mouse movement
 pointer_buffer = [(0,0), (0,0), (0,0), (0,0), (0,0)]
+prev_pointer = 0,0
 iter_count = 0
+mouseDown_flag = False
+threshold = 100
 
 while True:
     data = sock.recv()
@@ -83,7 +86,12 @@ while True:
     pointer_buffer[iter_count%5] = scaled_pointer
     actual_pointer = getAvgPointerLoc(pointer_buffer)
 
-    pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
+    #if mouse is down and movement below threshold, do not move the mouse
+    if (mouseDown_flag and (abs(actual_pointer[0] - prev_pointer[0]) + abs(actual_pointer[0] - prev_pointer[0]) < threshold)):
+        pass
+    else:
+        pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
+        prev_pointer = actual_pointer
     angles = calculateAngles(landmarks, handedness)
 
     fingerState = []
@@ -99,7 +107,9 @@ while True:
     print(fingerState)
     if(fingerState == ['straight', 'straight', 'bent', 'bent', 'bent']):
         pyautogui.mouseDown()
+        mouseDown_flag = True
     else:
         pyautogui.mouseUp()
+        mouseDown_flag = False
 
     iter_count+=1
