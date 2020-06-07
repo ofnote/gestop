@@ -16,17 +16,17 @@ def angleBetweenLines(x0,y0,x1,y1,x2,y2,handedness):
 # DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
 # MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
 # Palm angle - rotation of the hand with respect to the vertical axis (1)
-def calculateAngles(landmarks,handedness):
+def calculateAngles(landmarks, handedness):
     angles = {}
     angles['dip'] = []
     angles['pip'] = []
     angles['mcp'] = []
     for i in range(5):
-       angles['dip'].append(angleBetweenLines(landmarks[3+(4*i)]['x'],landmarks[3+(4*i)]['y'],
+        angles['dip'].append(angleBetweenLines(landmarks[3+(4*i)]['x'],landmarks[3+(4*i)]['y'],
                                                landmarks[3+(4*i)+1]['x'],landmarks[3+(4*i)+1]['y'],
                                                landmarks[3+(4*i)-1]['x'],landmarks[3+(4*i)-1]['y'],
                                                handedness)) #L3,L7,L11,L15,L19
-       angles['pip'].append(angleBetweenLines(landmarks[2+(4*i)]['x'],landmarks[2+(4*i)]['y'],
+        angles['pip'].append(angleBetweenLines(landmarks[2+(4*i)]['x'],landmarks[2+(4*i)]['y'],
                                                landmarks[2+(4*i)+1]['x'],landmarks[2+(4*i)+1]['y'],
                                                landmarks[2+(4*i)-1]['x'],landmarks[2+(4*i)-1]['y'],
                                                handedness)) #L2,L6,L10,L14,L18
@@ -43,6 +43,11 @@ def calculateAngles(landmarks,handedness):
                                        0,landmarks[0]['y'], handedness) #L2,L6,L10,L14,L18
     return angles
 
+def getAvgPointerLoc(pointer_buffer):
+    x = [i[0] for i in pointer_buffer]
+    y = [i[1] for i in pointer_buffer]
+    return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
+
 # allow mouse to move to edge of screen, and set interval between calls to 0.01
 pyautogui.FAILSAFE = False
 pyautogui.PAUSE = 0.01
@@ -54,7 +59,11 @@ sock.connect("tcp://127.0.0.1:5556")
 
 landmarkList = landmarkList_pb2.LandmarkList()
 
-while(True):
+# maintain a buffer of most recent movements to smoothen mouse movement
+pointer_buffer = [(0,0), (0,0), (0,0), (0,0), (0,0)]
+iter_count = 0
+
+while True:
     data = sock.recv()
     landmarkList.ParseFromString(data)
     landmarks = []
@@ -69,11 +78,13 @@ while(True):
 
     #Screen resolution
     resolution = pyautogui.size().width, pyautogui.size().height
-    
     scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
-                 
-    pyautogui.moveTo(scaled_pointer[0],scaled_pointer[1],0)
-    angles = calculateAngles(landmarks,handedness)
+
+    pointer_buffer[iter_count%5] = scaled_pointer
+    actual_pointer = getAvgPointerLoc(pointer_buffer)
+
+    pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
+    angles = calculateAngles(landmarks, handedness)
 
     fingerState = []
     if (angles['pip'][0] + angles['dip'][0] < 400): #thumbAngle
@@ -86,10 +97,9 @@ while(True):
         else:
             fingerState.append('bent')
     print(fingerState)
-    if(fingerState == ['straight','straight','bent','bent','bent',]):
-        pyautogui.click()
-    
-    #fingerAngle = [] 
-    #for i in range(5):
-    #    fingerAngle.append(angles['pip'][i] + angles['dip'][i])
-    #print(fingerAngle)   
+    if(fingerState == ['straight', 'straight', 'bent', 'bent', 'bent']):
+        pyautogui.mouseDown()
+    else:
+        pyautogui.mouseUp()
+
+    iter_count+=1
