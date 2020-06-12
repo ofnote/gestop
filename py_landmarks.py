@@ -1,49 +1,59 @@
-import zmq
-from proto import landmarkList_pb2
-import pyautogui
+'''
+This script receives the hand keypoints detected by the mediapipe through
+zmq/protobuf and then uses them to control the mouse through pyautogui.
+'''
+
 import math
+import zmq
+import pyautogui
+from proto import landmarkList_pb2
 
-#calculate the angle that (x1,y1) and (x2,y2) make at (x0,y0) 
-def angleBetweenLines(x0,y0,x1,y1,x2,y2,handedness):
-    angle1 = math.degrees(math.atan2(y0-y1,x0-x1))
-    angle2 = math.degrees(math.atan2(y0-y2,x0-x2))
 
-    if (handedness): return angle1-angle2
-    else: return angle2-angle1
-    
-# calculates the various angles from the joints of the hand, see `Useful Information` in README.md for more details
-# PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
-# DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
-# MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
-# Palm angle - rotation of the hand with respect to the vertical axis (1)
-def calculateAngles(landmarks, handedness):
+# Calculate the angle that (x1,y1) and (x2,y2) make at (x0,y0)
+def angle_between_lines(x0, y0, x1, y1, x2, y2):
+    angle1 = math.degrees(math.atan2(y0-y1, x0-x1))
+    angle2 = math.degrees(math.atan2(y0-y2, x0-x2))
+
+    return angle1 - angle2
+
+
+'''
+ calculates the various angles from the joints of the hand,
+ see `Useful Information` in README.md for more details
+ PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
+ DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
+ MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
+ Palm angle - rotation of the hand with respect to the vertical axis (1)
+'''
+def calculate_angles(landmarks):
     angles = {}
     angles['dip'] = []
     angles['pip'] = []
     angles['mcp'] = []
     for i in range(5):
-        angles['dip'].append(angleBetweenLines(landmarks[3+(4*i)]['x'],landmarks[3+(4*i)]['y'],
-                                               landmarks[3+(4*i)+1]['x'],landmarks[3+(4*i)+1]['y'],
-                                               landmarks[3+(4*i)-1]['x'],landmarks[3+(4*i)-1]['y'],
-                                               handedness)) #L3,L7,L11,L15,L19
-        angles['pip'].append(angleBetweenLines(landmarks[2+(4*i)]['x'],landmarks[2+(4*i)]['y'],
-                                               landmarks[2+(4*i)+1]['x'],landmarks[2+(4*i)+1]['y'],
-                                               landmarks[2+(4*i)-1]['x'],landmarks[2+(4*i)-1]['y'],
-                                               handedness)) #L2,L6,L10,L14,L18
+        angles['dip'].append(angle_between_lines(landmarks[3+(4*i)]['x'], landmarks[3+(4*i)]['y'],
+                                                 landmarks[3+(4*i)+1]['x'], landmarks[3+(4*i)+1]['y'],
+                                                 landmarks[3+(4*i)-1]['x'], landmarks[3+(4*i)-1]['y'],
+                                                 ))  # L3,L7,L11,L15,L19
+        angles['pip'].append(angle_between_lines(landmarks[2+(4*i)]['x'], landmarks[2+(4*i)]['y'],
+                                                 landmarks[2+(4*i)+1]['x'], landmarks[2+(4*i)+1]['y'],
+                                                 landmarks[2+(4*i)-1]['x'], landmarks[2+(4*i)-1]['y'],
+                                                 ))  # L2,L6,L10,L14,L18
 
 
     for i in range(4):
-        angles['mcp'].append(angleBetweenLines(landmarks[1+(4*i)]['x'],landmarks[1+(4*i)]['y'],
-                                               landmarks[1+(4*i)+3]['x'],landmarks[1+(4*i)+3]['y'],
-                                               landmarks[1+(4*i)+7]['x'],landmarks[1+(4*i)+7]['y'],
-                                               handedness)) #L1,L5,L9,L13
+        angles['mcp'].append(angle_between_lines(landmarks[1+(4*i)]['x'], landmarks[1+(4*i)]['y'],
+                                                 landmarks[1+(4*i)+3]['x'], landmarks[1+(4*i)+3]['y'],
+                                                 landmarks[1+(4*i)+7]['x'], landmarks[1+(4*i)+7]['y'],
+                                                 ))  # L1,L5,L9,L13
 
-    angles['palm'] = angleBetweenLines(landmarks[0]['x'],landmarks[0]['y'],
-                                       landmarks[9]['x'],landmarks[9]['y'],
-                                       0,landmarks[0]['y'], handedness) #L2,L6,L10,L14,L18
+    angles['palm'] = angle_between_lines(landmarks[0]['x'], landmarks[0]['y'],
+                                         landmarks[9]['x'], landmarks[9]['y'],
+                                         0, landmarks[0]['y'])  # L2,L6,L10,L14,L18
     return angles
 
-def getAvgPointerLoc(pointer_buffer):
+# Gets average of previous 5 pointer locations
+def get_avg_pointer_loc(pointer_buffer):
     x = [i[0] for i in pointer_buffer]
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
@@ -60,56 +70,58 @@ sock.connect("tcp://127.0.0.1:5556")
 landmarkList = landmarkList_pb2.LandmarkList()
 
 # maintain a buffer of most recent movements to smoothen mouse movement
-pointer_buffer = [(0,0), (0,0), (0,0), (0,0), (0,0)]
-prev_pointer = 0,0
-iter_count = 0
-mouseDown_flag = False
-threshold = 100
+pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
+prev_pointer = 0, 0
+ITER_COUNT = 0
+MOUSEDOWN_FLAG = False
+THRESHOLD = 100
 
 while True:
     data = sock.recv()
     landmarkList.ParseFromString(data)
     landmarks = []
-    for l in landmarkList.landmark:
-        landmarks.append({'x':l.x,'y':l.y,'z':l.z})
+    for lmark in landmarkList.landmark:
+        landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
 
-    #handedness - true if right hand, false if left
+    # Handedness - true if right hand, false if left
     handedness = landmarkList.handedness
 
-    #The tip of the index pointer is the eighth landmark in the list
+    # The tip of the index pointer is the eighth landmark in the list
     index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
 
-    #Screen resolution
+    # Screen resolution
     resolution = pyautogui.size().width, pyautogui.size().height
     scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
 
-    pointer_buffer[iter_count%5] = scaled_pointer
-    actual_pointer = getAvgPointerLoc(pointer_buffer)
+    pointer_buffer[ITER_COUNT%5] = scaled_pointer
+    actual_pointer = get_avg_pointer_loc(pointer_buffer)
 
-    #if mouse is down and movement below threshold, do not move the mouse
-    if (mouseDown_flag and (abs(actual_pointer[0] - prev_pointer[0]) + abs(actual_pointer[0] - prev_pointer[0]) < threshold)):
+    # if mouse is down and movement below threshold, do not move the mouse
+    if MOUSEDOWN_FLAG and (abs(actual_pointer[0] - prev_pointer[0]) +
+                           abs(actual_pointer[0] - prev_pointer[0]) < THRESHOLD):
         pass
     else:
         pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
         prev_pointer = actual_pointer
-    angles = calculateAngles(landmarks, handedness)
+    angles = calculate_angles(landmarks)
 
     fingerState = []
-    if (angles['pip'][0] + angles['dip'][0] < 400): #thumbAngle
+    if angles['pip'][0] + angles['dip'][0] < 400:  # thumbAngle
         fingerState.append('straight')
-    else: fingerState.append('bent')
+    else:
+        fingerState.append('bent')
 
-    for i in range(1,5):
-        if (angles['pip'][i] + angles['dip'][i] > 0):
+    for i in range(1, 5):
+        if angles['pip'][i] + angles['dip'][i] > 0:
             fingerState.append('straight')
         else:
             fingerState.append('bent')
     print(fingerState)
     if(fingerState == ['straight', 'straight', 'bent', 'bent', 'bent']):
         pyautogui.mouseDown()
-        mouseDown_flag = True
+        MOUSEDOWN_FLAG = True
     else:
         pyautogui.mouseUp()
-        mouseDown_flag = False
+        MOUSEDOWN_FLAG = False
 
-    iter_count+=1
+    ITER_COUNT += 1
