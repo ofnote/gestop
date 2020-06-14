@@ -14,7 +14,7 @@ The code consists of a few distinct pieces which are:
 
 A visualization of the various modules : 
 
-[module visualization](Flowchart.png)
+![module visualization](Flowchart.png)
 
 ### Gestures
 
