@@ -5,6 +5,17 @@ Built on top of [mediapipe](https://github.com/google/mediapipe), this repo aims
 
 The keypoint of the tip of the index finger is extracted in the Python script, and, through pyautogui, used to control the mouse. [WIP]
 
+The code consists of a few distinct pieces which are:
+
+* The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
+* Mouse tracking - Part of `py_landmarks.py`, responsible for moving the cursor using the position of the index finger.
+* Config detection - Takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
+* Config action - Uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
+
+A visualization of the various modules : 
+
+[module visualization](Flowchart.png)
+
 ### Gestures
 
 1. Mouse control -> Move index finger

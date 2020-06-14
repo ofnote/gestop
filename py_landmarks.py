@@ -58,6 +58,31 @@ def get_avg_pointer_loc(pointer_buffer):
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
+# Using the calculated angles, outputs a high level configuration of the fingers
+def get_configuration(angles):
+    handState = []
+    if angles['pip'][0] + angles['dip'][0] < 400:  # thumbAngle
+        handState.append('straight')
+    else:
+        handState.append('bent')
+
+    for i in range(1, 5):
+        if angles['pip'][i] + angles['dip'][i] > 0:
+            handState.append('straight')
+        else:
+            handState.append('bent')
+
+    return handState
+
+# Given a configuration, decides what action to perform.
+def config_action(config):
+    if(config == ['straight', 'straight', 'bent', 'bent', 'bent']):
+        pyautogui.mouseDown()
+        return True
+    else:
+        pyautogui.mouseUp()
+        return False
+
 # allow mouse to move to edge of screen, and set interval between calls to 0.01
 pyautogui.FAILSAFE = False
 pyautogui.PAUSE = 0.01
@@ -76,6 +101,13 @@ ITER_COUNT = 0
 MOUSEDOWN_FLAG = False
 THRESHOLD = 100
 
+
+# Modules:
+# Mouse Tracking - responsible for tracking and moving the cursor
+# Config Detection - takes in the keypoints and outputs a configuration
+# i.e. ['straight','straight', 'bent', 'bent', 'bent'] (subject to change)
+# Config Action - takes in a configuration and maps it to an action i.e. LeftClick
+
 while True:
     data = sock.recv()
     landmarkList.ParseFromString(data)
@@ -85,6 +117,10 @@ while True:
 
     # Handedness - true if right hand, false if left
     handedness = landmarkList.handedness
+
+    ##################
+    # Mouse Tracking #
+    ##################
 
     # The tip of the index pointer is the eighth landmark in the list
     index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
@@ -103,25 +139,19 @@ while True:
     else:
         pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
         prev_pointer = actual_pointer
+
+    ####################
+    # Config Detection #
+    ####################
+
     angles = calculate_angles(landmarks)
+    handState = get_configuration(angles)
+    #print(fingerState)
 
-    fingerState = []
-    if angles['pip'][0] + angles['dip'][0] < 400:  # thumbAngle
-        fingerState.append('straight')
-    else:
-        fingerState.append('bent')
+    #################
+    # Config Action #
+    #################
 
-    for i in range(1, 5):
-        if angles['pip'][i] + angles['dip'][i] > 0:
-            fingerState.append('straight')
-        else:
-            fingerState.append('bent')
-    print(fingerState)
-    if(fingerState == ['straight', 'straight', 'bent', 'bent', 'bent']):
-        pyautogui.mouseDown()
-        MOUSEDOWN_FLAG = True
-    else:
-        pyautogui.mouseUp()
-        MOUSEDOWN_FLAG = False
+    MOUSEDOWN_FLAG = config_action(handState)
 
     ITER_COUNT += 1
