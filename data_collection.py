@@ -46,15 +46,15 @@ actual_hand = int(input("Enter the hand for which you are collecting gesture dat
 gesture = input("Enter the name of the gesture for which you are capturing data, \
 (a simple one word description of the orientation of your hand) :\n")
 
-print("The script will begin executing in 3 seconds. Make sure your hand is in position.")
-time.sleep(3)
+print("The script will begin executing in 5 seconds. Make sure your hand is in position.")
+time.sleep(5)
 
 # no. of samples added and number of samples being collected
 ROWS_ADDED = 0
-NSAMPLES = 200
+NSAMPLES = 1000
 
 f = open("gestures_data.csv", 'a+')
-#set pointer at beginn
+#set pointer at beginning of file
 f.seek(0)
 
 # The string which is written to the dataset
@@ -88,7 +88,7 @@ while ROWS_ADDED < NSAMPLES:
     #simple loading bar
     print(str(ROWS_ADDED)+'/'+str(NSAMPLES)+'\t|'+('-'*int((50*ROWS_ADDED)/NSAMPLES))+'>', end='\r')
 
-# Writing data to file at once instead of in loop for performance reasons.
+# Writing data to file at once instead of in for loop for performance reasons.
 f.write(DATASET_STR)
 f.close()
 print("1000 rows of data has been successfully collected.")
