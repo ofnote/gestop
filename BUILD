@@ -13,6 +13,15 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "hand_tracking_cpu",
+    deps = [
+        "//gestures-mediapipe:hand_tracking_landmarks_cpu",
+        "//mediapipe/graphs/hand_tracking:desktop_tflite_calculators",
+        ":zeromq",
+    ],
+)
+
 cc_proto_library(
     name = "landmarkList_cc_proto",
     deps = [":landmarkList_proto"],
@@ -57,7 +66,22 @@ cc_library(
 )
 
 
-
-
-
-
+cc_library(
+    name = "hand_tracking_landmarks_cpu",
+    srcs = ["hand_tracking_landmarks_cpu.cc"],
+    deps = [
+        ":landmarkList_cc_proto",
+        "//mediapipe/framework/formats:landmark_cc_proto",
+        "//mediapipe/framework/formats:classification_cc_proto",
+        "//mediapipe/framework:calculator_framework",
+        "//mediapipe/framework/formats:image_frame",
+        "//mediapipe/framework/formats:image_frame_opencv",
+        "//mediapipe/framework/port:commandlineflags",
+        "//mediapipe/framework/port:file_helpers",
+        "//mediapipe/framework/port:opencv_highgui",
+        "//mediapipe/framework/port:opencv_imgproc",
+        "//mediapipe/framework/port:opencv_video",
+        "//mediapipe/framework/port:parse_text_proto",
+        "//mediapipe/framework/port:status",
+    ],
+)
