@@ -1,3 +1,4 @@
 libzmq.so
 zmq.hpp
 __pycache__
+logs
