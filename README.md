@@ -49,10 +49,19 @@ Note: Run build instructions in the `mediapipe/` directory, not inside this dire
 
 #### Mediapipe Executable
 
+##### GPU (Linux only)
 ``` sh
 bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestures-mediapipe:hand_tracking_gpu
 
 GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_gpu --calculator_graph_config_file=gestures-mediapipe/hand_tracking_desktop_live.pbtxt
+
+```
+
+##### CPU
+``` sh
+bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 gestures-mediapipe:hand_tracking_cpu
+
+GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_cpu --calculator_graph_config_file=gestures-mediapipe/hand_tracking_desktop_live.pbtxt
 
 ```
 
