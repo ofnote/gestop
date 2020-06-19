@@ -6,26 +6,39 @@ zmq/protobuf and then uses them to control the mouse through pyautogui.
 import math
 import zmq
 import pyautogui
+import torch
+import numpy as np
+from model import GestureNet
 from proto import landmarkList_pb2
 
 
-# Calculate the angle that (x1,y1) and (x2,y2) make at (x0,y0)
-def angle_between_lines(x0, y0, x1, y1, x2, y2):
-    angle1 = math.degrees(math.atan2(y0-y1, x0-x1))
-    angle2 = math.degrees(math.atan2(y0-y2, x0-x2))
+##################
+# Mouse Tracking #
+##################
 
-    return angle1 - angle2
+def get_avg_pointer_loc(pointer_buffer):
+    '''Gets average of previous 5 pointer locations'''
+    x = [i[0] for i in pointer_buffer]
+    y = [i[1] for i in pointer_buffer]
+    return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
+####################
+# Config Detection #
+####################
 
-'''
- calculates the various angles from the joints of the hand,
- see `Useful Information` in README.md for more details
- PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
- DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
- MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
- Palm angle - rotation of the hand with respect to the vertical axis (1)
-'''
+    ########################
+    # Rule-Based Detection #
+    ########################
+
 def calculate_angles(landmarks):
+    '''
+    Calculates the various angles from the joints of the hand,
+    see `Useful Information` in README.md for more details
+    PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
+    DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
+    MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
+    Palm angle - rotation of the hand with respect to the vertical axis (1)
+    '''
     angles = {}
     angles['dip'] = []
     angles['pip'] = []
@@ -52,14 +65,16 @@ def calculate_angles(landmarks):
                                          0, landmarks[0]['y'])  # L2,L6,L10,L14,L18
     return angles
 
-# Gets average of previous 5 pointer locations
-def get_avg_pointer_loc(pointer_buffer):
-    x = [i[0] for i in pointer_buffer]
-    y = [i[1] for i in pointer_buffer]
-    return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
-# Using the calculated angles, outputs a high level configuration of the fingers
+def angle_between_lines(x0, y0, x1, y1, x2, y2):
+    ''' Calculate the angle that (x1,y1) and (x2,y2) make at (x0,y0) '''
+    angle1 = math.degrees(math.atan2(y0-y1, x0-x1))
+    angle2 = math.degrees(math.atan2(y0-y2, x0-x2))
+
+    return angle1 - angle2
+
 def get_configuration(angles):
+    ''' Using the calculated angles, outputs a high level configuration of the fingers. '''
     handState = []
     if angles['pip'][0] + angles['dip'][0] < 400:  # thumbAngle
         handState.append('straight')
@@ -74,14 +89,71 @@ def get_configuration(angles):
 
     return handState
 
-# Given a configuration, decides what action to perform.
+    ##############################
+    # Neural Net Based Detection #
+    ##############################
+
+def format_landmark(landmark, hand, input_dim):
+    '''
+    Formats the input keypoints into the format expected by the neural net.
+    Refer make_vector in train_model.py for more details
+    '''
+    formatted_landmark = np.empty((input_dim))
+    for i in range(4):
+        formatted_landmark[3*i] = landmark[i+1]['x'] - landmark[i]['x']
+        formatted_landmark[3*i+1] = landmark[i+1]['y'] - landmark[i]['y']
+        formatted_landmark[3*i+2] = landmark[i+1]['z'] - landmark[i]['z']
+
+    for i in range(3):
+        formatted_landmark[3*i+12] = landmark[i+6]['x'] - landmark[i+5]['x']
+        formatted_landmark[3*i+13] = landmark[i+6]['y'] - landmark[i+5]['y']
+        formatted_landmark[3*i+14] = landmark[i+6]['z'] - landmark[i+5]['z']
+
+        formatted_landmark[3*i+21] = landmark[i+10]['x'] - landmark[i+9]['x']
+        formatted_landmark[3*i+22] = landmark[i+10]['y'] - landmark[i+9]['y']
+        formatted_landmark[3*i+23] = landmark[i+10]['z'] - landmark[i+9]['z']
+
+        formatted_landmark[3*i+30] = landmark[i+14]['x'] - landmark[i+13]['x']
+        formatted_landmark[3*i+31] = landmark[i+14]['y'] - landmark[i+13]['y']
+        formatted_landmark[3*i+32] = landmark[i+14]['z'] - landmark[i+13]['z']
+
+        formatted_landmark[3*i+39] = landmark[i+18]['x'] - landmark[i+17]['x']
+        formatted_landmark[3*i+40] = landmark[i+18]['y'] - landmark[i+17]['y']
+        formatted_landmark[3*i+41] = landmark[i+18]['z'] - landmark[i+17]['z']
+
+    formatted_landmark[48] = hand
+    return formatted_landmark
+
+def get_gesture(net, landmarks):
+    '''
+    Uses the neural net to classify the keypoints into a gesture.
+    Also decides if a 'bad gesture' was performed.
+    '''
+    gesture = 'bad'
+    landmarks = torch.tensor(landmarks, dtype=torch.float32)
+    out = net(landmarks)
+    print(out)
+    return gesture
+
+
+
+#################
+# Config Action #
+#################
+
 def config_action(config):
+    ''' Given a configuration, decides what action to perform. '''
     if(config == ['straight', 'straight', 'bent', 'bent', 'bent']):
         pyautogui.mouseDown()
         return True
     else:
         pyautogui.mouseUp()
         return False
+
+
+########
+# Main #
+########
 
 # allow mouse to move to edge of screen, and set interval between calls to 0.01
 pyautogui.FAILSAFE = False
@@ -100,7 +172,13 @@ prev_pointer = 0, 0
 ITER_COUNT = 0
 MOUSEDOWN_FLAG = False
 THRESHOLD = 100
+OUTPUT_CLASSES = 4
+INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
+PATH = 'models/gesture_net'
 
+gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
+gesture_net.load_state_dict(torch.load(PATH))
+gesture_net.eval()
 
 # Modules:
 # Mouse Tracking - responsible for tracking and moving the cursor
@@ -144,14 +222,16 @@ while True:
     # Config Detection #
     ####################
 
-    angles = calculate_angles(landmarks)
-    handState = get_configuration(angles)
-    #print(fingerState)
+    #angles = calculate_angles(landmarks)
+    #gesture = get_configuration(angles)
+    #print(gesture)
+    input_data = format_landmark(landmarks, handedness, INPUT_DIM)
+    GESTURE = get_gesture(gesture_net, input_data)
 
     #################
     # Config Action #
     #################
 
-    MOUSEDOWN_FLAG = config_action(handState)
+    #MOUSEDOWN_FLAG = config_action(GESTURE)
 
     ITER_COUNT += 1
