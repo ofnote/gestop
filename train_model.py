@@ -2,6 +2,7 @@
 Describes the implementation of the training procedure for gesture net
 '''
 import time
+import json
 import torch
 import pandas as pd
 import numpy as np
@@ -110,6 +111,12 @@ test_Y = np.array(test_Y)
 
 le = LabelEncoder()
 le.fit(train_Y)
+
+# Store encoding to disk
+le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
+with open('gesture_mapping.json','w') as f:
+    f.write(json.dumps(le_name_mapping))
+
 
 train_Y = le.transform(train_Y)
 test_Y = le.transform(test_Y)
