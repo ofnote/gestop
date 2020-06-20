@@ -114,7 +114,8 @@ le.fit(train_Y)
 
 # Store encoding to disk
 le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
-with open('gesture_mapping.json','w') as f:
+print(le_name_mapping)
+with open('gesture_mapping.json', 'w') as f:
     f.write(json.dumps(le_name_mapping))
 
 
@@ -130,7 +131,7 @@ test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
 # TRAINING #
 ############
 
-OUTPUT_CLASSES = 4
+OUTPUT_CLASSES = 5
 INPUT_DIM = 49 #refer make_vector() to verify input dimensions
 
 gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
