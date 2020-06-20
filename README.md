@@ -8,9 +8,12 @@ The keypoint of the tip of the index finger is extracted in the Python script, a
 The code consists of a few distinct pieces which are:
 
 * The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
-* Mouse tracking - Part of `py_landmarks.py`, responsible for moving the cursor using the position of the index finger.
+* Mouse tracking - Part of `gesture_control.py`, responsible for moving the cursor using the position of the index finger.
 * Config detection - Takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
 * Config action - Uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
+
+[*Demo video link*](https://drive.google.com/file/d/1UmL5u6LCbpAZFdJM46QpT9r7uGjbP4Mz/view)
+
 
 A visualization of the various modules : 
 
@@ -18,11 +21,11 @@ A visualization of the various modules :
 
 ### Gestures
 
-1. Mouse control -> Move index finger
-2. Left Mouse Down -> Thumb and index straight, other fingers bent (i.e. the hand gesture for the number 7)
-3. Right Mouse Down -> Thumb folded (gesture for four)
-4. Double Click -> Ring and little finger bent (gesture for eight)
-5. Scroll -> Middle and ring finger bent (the spiderman gesture)
+1. *Mouse control* -> Move index finger
+2. *Left Mouse Down* -> Thumb and index straight, other fingers bent (i.e. the hand gesture for the number 7)
+3. *Right Mouse Down* -> Thumb folded (gesture for four)
+4. *Double Click* -> Ring and little finger bent (gesture for eight)
+5. *Scroll* -> Middle and ring finger bent (the spiderman gesture)
 
 E.g. A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
 
@@ -41,6 +44,10 @@ The protobuf module in Python must be installed, through the use of `pip` or you
 * pyautogui
 
 pyautogui is a GUI automation python module used, in this case, to simulate the movement of the mouse. As with other python packages, to be installed through `pip` or package manager e.g. `apt`. 
+
+* Pytorch
+
+Used to train and deploy the neural net which recognizes gestures.
 
 ### Usage
 
@@ -71,7 +78,7 @@ GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_cpu --calculator_g
 #### Python Script
 
 ``` python
-python gestures-mediapipe/py_landmarks.py
+python gestures-mediapipe/gesture_control.py
 
 ```
 
@@ -86,7 +93,7 @@ python gestures-mediapipe/py_landmarks.py
 * `hand_tracking_landmarks.cc` -> Source code for the mediapipe executable. GPU version is Linux only.
 * `model.py` -> Declaration of the model(s) used.
 * `train_model.py` -> Trains the "GestureNet" model and saves to disk
-* `py_landmarks.py` -> Heart of the project, code to interface with the system using gestures.
+* `gesture_control.py` -> Heart of the project, code to interface with the system using gestures.
 
 
 ### Useful Information
@@ -94,3 +101,5 @@ python gestures-mediapipe/py_landmarks.py
 [Joints of the hand](https://en.wikipedia.org/wiki/Interphalangeal_joints_of_the_hand)
 
 [HandCommander](https://www.deuxexsilicon.com/handcommander/)
+
+[Video recorded with VokoScreenNG](https://github.com/vkohaupt/vokoscreenNG)

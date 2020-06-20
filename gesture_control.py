@@ -4,6 +4,7 @@ zmq/protobuf and then uses them to control the mouse through pyautogui.
 '''
 
 import math
+import json
 import zmq
 import pyautogui
 import torch
@@ -25,73 +26,6 @@ def get_avg_pointer_loc(pointer_buffer):
 ####################
 # Config Detection #
 ####################
-
-    ########################
-    # Rule-Based Detection #
-    ########################
-
-def calculate_angles(landmarks):
-    '''
-    Calculates the various angles from the joints of the hand,
-    see `Useful Information` in README.md for more details
-    PIP (Proximal InterPhalangeal) angles - lower joint angles (5)
-    DIP (Dostal InterPhalangeal) angles - upper joint angles (5)
-    MCP (MetaCarpoPhalangeal) angles - angles between fingers (4)
-    Palm angle - rotation of the hand with respect to the vertical axis (1)
-    '''
-    angles = {}
-    angles['dip'] = []
-    angles['pip'] = []
-    angles['mcp'] = []
-    for i in range(5):
-        angles['dip'].append(angle_between_lines(landmarks[3+(4*i)]['x'], landmarks[3+(4*i)]['y'],
-                                                 landmarks[3+(4*i)+1]['x'], landmarks[3+(4*i)+1]['y'],
-                                                 landmarks[3+(4*i)-1]['x'], landmarks[3+(4*i)-1]['y'],
-                                                 ))  # L3,L7,L11,L15,L19
-        angles['pip'].append(angle_between_lines(landmarks[2+(4*i)]['x'], landmarks[2+(4*i)]['y'],
-                                                 landmarks[2+(4*i)+1]['x'], landmarks[2+(4*i)+1]['y'],
-                                                 landmarks[2+(4*i)-1]['x'], landmarks[2+(4*i)-1]['y'],
-                                                 ))  # L2,L6,L10,L14,L18
-
-
-    for i in range(4):
-        angles['mcp'].append(angle_between_lines(landmarks[1+(4*i)]['x'], landmarks[1+(4*i)]['y'],
-                                                 landmarks[1+(4*i)+3]['x'], landmarks[1+(4*i)+3]['y'],
-                                                 landmarks[1+(4*i)+7]['x'], landmarks[1+(4*i)+7]['y'],
-                                                 ))  # L1,L5,L9,L13
-
-    angles['palm'] = angle_between_lines(landmarks[0]['x'], landmarks[0]['y'],
-                                         landmarks[9]['x'], landmarks[9]['y'],
-                                         0, landmarks[0]['y'])  # L2,L6,L10,L14,L18
-    return angles
-
-
-def angle_between_lines(x0, y0, x1, y1, x2, y2):
-    ''' Calculate the angle that (x1,y1) and (x2,y2) make at (x0,y0) '''
-    angle1 = math.degrees(math.atan2(y0-y1, x0-x1))
-    angle2 = math.degrees(math.atan2(y0-y2, x0-x2))
-
-    return angle1 - angle2
-
-def get_configuration(angles):
-    ''' Using the calculated angles, outputs a high level configuration of the fingers. '''
-    handState = []
-    if angles['pip'][0] + angles['dip'][0] < 400:  # thumbAngle
-        handState.append('straight')
-    else:
-        handState.append('bent')
-
-    for i in range(1, 5):
-        if angles['pip'][i] + angles['dip'][i] > 0:
-            handState.append('straight')
-        else:
-            handState.append('bent')
-
-    return handState
-
-    ##############################
-    # Neural Net Based Detection #
-    ##############################
 
 def format_landmark(landmark, hand, input_dim):
     '''
@@ -124,15 +58,19 @@ def format_landmark(landmark, hand, input_dim):
     formatted_landmark[48] = hand
     return formatted_landmark
 
-def get_gesture(net, landmarks):
+def get_gesture(net, mapping, landmarks):
     '''
     Uses the neural net to classify the keypoints into a gesture.
     Also decides if a 'bad gesture' was performed.
     '''
-    gesture = 'bad'
     landmarks = torch.tensor(landmarks, dtype=torch.float32)
     out = net(landmarks)
-    print(out)
+    #print(dict(zip(mapping.values(), softmax(out.detach().numpy()))))
+    gesture_dict = dict(zip(mapping.values(), out.detach().numpy()))
+    # doubling the likelihood of the bad gesture to prevent misclassification
+    gesture_dict['bad'] *= 2
+    gesture = max(gesture_dict, key=gesture_dict.get)
+    #print(max(gesture_dict, key=gesture_dict.get), gesture_dict[max(gesture_dict, key=gesture_dict.get)])
     return gesture
 
 
@@ -141,14 +79,36 @@ def get_gesture(net, landmarks):
 # Config Action #
 #################
 
-def config_action(config):
-    ''' Given a configuration, decides what action to perform. '''
-    if(config == ['straight', 'straight', 'bent', 'bent', 'bent']):
+def config_action(config, flags):
+    '''
+    Given a configuration, decides what action to perform.
+    Returns a flag based on whether the left mouse button is pressed or not
+    bad -> invalid gesture
+    seven -> left mouse down
+    four -> right mouse down
+    eight -> double click
+    spiderman -> scroll
+    '''
+    if config == 'bad':
+        pyautogui.mouseUp()
+        flags['mousedown'] = False
+        flags['scroll'] = False
+        return flags
+    elif config == 'seven':
         pyautogui.mouseDown()
-        return True
+        flags['mousedown'] = True
+        flags['scroll'] = False
+        return flags
     else:
         pyautogui.mouseUp()
-        return False
+        flags['mousedown'] = False
+        if config == 'four':
+            pyautogui.rightClick()
+        elif config == 'eight':
+            pyautogui.doubleClick()
+        else: #spiderman
+            flags['scroll'] = True
+        return flags
 
 
 ########
@@ -170,15 +130,24 @@ landmarkList = landmarkList_pb2.LandmarkList()
 pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
 prev_pointer = 0, 0
 ITER_COUNT = 0
-MOUSEDOWN_FLAG = False
+
+# array of flags for mouse control
+FLAGS = {'mousedown':False, 'scroll':False}
 THRESHOLD = 100
-OUTPUT_CLASSES = 4
+
+
+OUTPUT_CLASSES = 5
 INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
 PATH = 'models/gesture_net'
 
+# Setting up network
 gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
 gesture_net.load_state_dict(torch.load(PATH))
 gesture_net.eval()
+
+# Fetching gesture mapping
+with open('gesture_mapping.json', 'r') as jsonfile:
+    gesture_mapping = json.load(jsonfile)
 
 # Modules:
 # Mouse Tracking - responsible for tracking and moving the cursor
@@ -211,9 +180,12 @@ while True:
     actual_pointer = get_avg_pointer_loc(pointer_buffer)
 
     # if mouse is down and movement below threshold, do not move the mouse
-    if MOUSEDOWN_FLAG and (abs(actual_pointer[0] - prev_pointer[0]) +
-                           abs(actual_pointer[0] - prev_pointer[0]) < THRESHOLD):
+    if FLAGS['mousedown'] and (abs(actual_pointer[0] - prev_pointer[0]) +
+                           abs(actual_pointer[1] - prev_pointer[1]) < THRESHOLD):
         pass
+    elif FLAGS['scroll']:
+        amt_to_scroll = (actual_pointer[1] - prev_pointer[1])/10
+        pyautogui.scroll(amt_to_scroll)
     else:
         pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
         prev_pointer = actual_pointer
@@ -226,12 +198,12 @@ while True:
     #gesture = get_configuration(angles)
     #print(gesture)
     input_data = format_landmark(landmarks, handedness, INPUT_DIM)
-    GESTURE = get_gesture(gesture_net, input_data)
+    GESTURE = get_gesture(gesture_net, gesture_mapping, input_data)
 
     #################
     # Config Action #
     #################
 
-    #MOUSEDOWN_FLAG = config_action(GESTURE)
+    FLAGS = config_action(GESTURE, FLAGS)
 
     ITER_COUNT += 1
