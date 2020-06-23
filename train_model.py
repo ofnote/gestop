@@ -88,134 +88,138 @@ def calc_accuracy(ans, pred):
     pred = np.argmax(pred, axis=1).flatten()
     return np.sum(np.equal(pred, ans)) / len(ans)
 
+def main():
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    EPOCHS = 10
+    SEED_VAL = 42
+    init_seed(SEED_VAL)
+    writer = SummaryWriter('logs')
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-EPOCHS = 10
-SEED_VAL = 42
-init_seed(SEED_VAL)
-writer = SummaryWriter('logs')
+    ##################
+    # INPUT PIPELINE #
+    ##################
 
-##################
-# INPUT PIPELINE #
-##################
+    # Read and format the csv
+    df = pd.read_csv("gestures_data.csv")
+    train, test = train_test_split(df, test_size=0.1, random_state=SEED_VAL)
+    train_X, train_Y = split_dataframe(train)
+    test_X, test_Y = split_dataframe(test)
 
-# Read and format the csv
-df = pd.read_csv("gestures_data.csv")
-train, test = train_test_split(df, test_size=0.1, random_state=SEED_VAL)
-train_X, train_Y = split_dataframe(train)
-test_X, test_Y = split_dataframe(test)
+    # One Hot Encoding of the target classes
+    train_Y = np.array(train_Y)
+    test_Y = np.array(test_Y)
 
-# One Hot Encoding of the target classes
-train_Y = np.array(train_Y)
-test_Y = np.array(test_Y)
+    le = LabelEncoder()
+    le.fit(train_Y)
 
-le = LabelEncoder()
-le.fit(train_Y)
-
-# Store encoding to disk
-le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
-print(le_name_mapping)
-with open('gesture_mapping.json', 'w') as f:
-    f.write(json.dumps(le_name_mapping))
-
-
-train_Y = le.transform(train_Y)
-test_Y = le.transform(test_Y)
-
-BATCH_SIZE = 64
-train_loader = format_and_load(train_X, train_Y, BATCH_SIZE)
-test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
+    # Store encoding to disk
+    le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
+    print(le_name_mapping)
+    with open('gesture_mapping.json', 'w') as f:
+        f.write(json.dumps(le_name_mapping))
 
 
-############
-# TRAINING #
-############
+    train_Y = le.transform(train_Y)
+    test_Y = le.transform(test_Y)
 
-OUTPUT_CLASSES = 6
-INPUT_DIM = 49 #refer make_vector() to verify input dimensions
+    BATCH_SIZE = 64
+    train_loader = format_and_load(train_X, train_Y, BATCH_SIZE)
+    test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
 
-gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
-optimizer = torch.optim.Adam(gesture_net.parameters(), lr=5e-3)
-criterion = torch.nn.CrossEntropyLoss()
-gesture_net.cuda()
 
-training_loss_values = []
-validation_loss_values = []
-validation_accuracy_values = []
+    ############
+    # TRAINING #
+    ############
 
-for epoch in range(EPOCHS):
+    OUTPUT_CLASSES = 6
+    INPUT_DIM = 49 #refer make_vector() to verify input dimensions
 
-    gesture_net.train()
+    gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
+    optimizer = torch.optim.Adam(gesture_net.parameters(), lr=5e-3)
+    criterion = torch.nn.CrossEntropyLoss()
+    gesture_net.cuda()
 
-    print('======== Epoch {:} / {:} ========'.format(epoch + 1, EPOCHS))
-    start_time = time.time()
-    TOTAL_LOSS = 0
+    training_loss_values = []
+    validation_loss_values = []
+    validation_accuracy_values = []
 
-    for batch_no, batch in enumerate(train_loader):
-        input_data = batch[0].to(device)
-        target = batch[1].to(device)
+    for epoch in range(EPOCHS):
 
-        gesture_net.zero_grad()
-        output = gesture_net(input_data.float())
+        gesture_net.train()
 
-        loss = criterion(output, target.long())
-        TOTAL_LOSS += loss.item()
+        print('======== Epoch {:} / {:} ========'.format(epoch + 1, EPOCHS))
+        start_time = time.time()
+        TOTAL_LOSS = 0
 
-        loss.backward()
-        optimizer.step()
+        for batch_no, batch in enumerate(train_loader):
+            input_data = batch[0].to(device)
+            target = batch[1].to(device)
 
-    #Logging the loss and accuracy in Tensorboard
-    avg_train_loss = TOTAL_LOSS / len(train_loader)
-    training_loss_values.append(avg_train_loss)
-
-    for name, weights in gesture_net.named_parameters():
-        writer.add_histogram(name, weights, epoch)
-
-    writer.add_scalar('Train/Loss', avg_train_loss, epoch)
-
-    print("Average training loss: {0:.2f}".format(avg_train_loss))
-
-    # Validation
-
-    gesture_net.eval()
-
-    test_loss, test_accuracy = 0, 0
-    NB_EVAL_STEPS = 0
-
-    for batch_no, batch in enumerate(test_loader):
-
-        input_data = batch[0].to(device)
-        target = batch[1].to(device)
-
-        with torch.no_grad():
+            gesture_net.zero_grad()
             output = gesture_net(input_data.float())
+
             loss = criterion(output, target.long())
+            TOTAL_LOSS += loss.item()
 
-        target = target.to('cpu').numpy()
-        output = output.to('cpu').numpy()
+            loss.backward()
+            optimizer.step()
 
-        tmp_eval_accuracy = calc_accuracy(target, output)
-        test_accuracy += tmp_eval_accuracy
-        test_loss += loss.item()
+        #Logging the loss and accuracy in Tensorboard
+        avg_train_loss = TOTAL_LOSS / len(train_loader)
+        training_loss_values.append(avg_train_loss)
 
-        NB_EVAL_STEPS += 1
+        for name, weights in gesture_net.named_parameters():
+            writer.add_histogram(name, weights, epoch)
 
-    avg_valid_acc = test_accuracy/NB_EVAL_STEPS
-    avg_valid_loss = test_loss/NB_EVAL_STEPS
-    validation_loss_values.append(avg_valid_loss)
-    validation_accuracy_values.append(avg_valid_acc)
+        writer.add_scalar('Train/Loss', avg_train_loss, epoch)
 
-    writer.add_scalar('Valid/Loss', avg_valid_loss, epoch)
-    writer.add_scalar('Valid/Accuracy', avg_valid_acc, epoch)
-    writer.flush()
+        print("Average training loss: {0:.2f}".format(avg_train_loss))
 
-    print("Avg Val Accuracy: {0:.2f}".format(avg_valid_acc))
-    print("Average Val Loss: {0:.2f}".format(avg_valid_loss))
-    print("Time taken by epoch: {0:.2f}".format(time.time() - start_time))
+        # Validation
 
-################
-# SAVING MODEL #
-################
+        gesture_net.eval()
 
-PATH = 'models/gesture_net'
-torch.save(gesture_net.state_dict(), PATH)
+        test_loss, test_accuracy = 0, 0
+        NB_EVAL_STEPS = 0
+
+        for batch_no, batch in enumerate(test_loader):
+
+            input_data = batch[0].to(device)
+            target = batch[1].to(device)
+
+            with torch.no_grad():
+                output = gesture_net(input_data.float())
+                loss = criterion(output, target.long())
+
+            target = target.to('cpu').numpy()
+            output = output.to('cpu').numpy()
+
+            tmp_eval_accuracy = calc_accuracy(target, output)
+            test_accuracy += tmp_eval_accuracy
+            test_loss += loss.item()
+
+            NB_EVAL_STEPS += 1
+
+        avg_valid_acc = test_accuracy/NB_EVAL_STEPS
+        avg_valid_loss = test_loss/NB_EVAL_STEPS
+        validation_loss_values.append(avg_valid_loss)
+        validation_accuracy_values.append(avg_valid_acc)
+
+        writer.add_scalar('Valid/Loss', avg_valid_loss, epoch)
+        writer.add_scalar('Valid/Accuracy', avg_valid_acc, epoch)
+        writer.flush()
+
+        print("Avg Val Accuracy: {0:.2f}".format(avg_valid_acc))
+        print("Average Val Loss: {0:.2f}".format(avg_valid_loss))
+        print("Time taken by epoch: {0:.2f}".format(time.time() - start_time))
+
+    ################
+    # SAVING MODEL #
+    ################
+
+    PATH = 'models/gesture_net'
+    torch.save(gesture_net.state_dict(), PATH)
+
+
+if __name__ == '__main__':
+    main()

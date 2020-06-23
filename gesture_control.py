@@ -23,7 +23,7 @@ def get_avg_pointer_loc(pointer_buffer):
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
 
-def calc_pointer(landmarks, pointer_buffer):
+def calc_pointer(landmarks, pointer_buffer, ITER_COUNT):
     ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
 
     # The tip of the index pointer is the eighth landmark in the list
@@ -151,89 +151,94 @@ def config_action(config, flags, modes):
 # Main #
 ########
 
-# allow mouse to move to edge of screen, and set interval between calls to 0.01
-pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0.01
+def main():
+    # allow mouse to move to edge of screen, and set interval between calls to 0.01
+    pyautogui.FAILSAFE = False
+    pyautogui.PAUSE = 0.01
 
-# Setting up connection
-context = zmq.Context()
-sock = context.socket(zmq.PULL)
-sock.connect("tcp://127.0.0.1:5556")
+    # Setting up connection
+    context = zmq.Context()
+    sock = context.socket(zmq.PULL)
+    sock.connect("tcp://127.0.0.1:5556")
 
-landmarkList = landmarkList_pb2.LandmarkList()
+    landmarkList = landmarkList_pb2.LandmarkList()
 
-# maintain a buffer of most recent movements to smoothen mouse movement
-pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
-prev_pointer = 0, 0
-ITER_COUNT = 0
+    # maintain a buffer of most recent movements to smoothen mouse movement
+    pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
+    prev_pointer = 0, 0
+    ITER_COUNT = 0
 
-# array of flags for mouse control
-FLAGS = {'mousedown':False, 'scroll':False}
-THRESHOLD = 100
-
-
-OUTPUT_CLASSES = 6
-INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
-PATH = 'models/gesture_net'
-
-# Setting up network
-gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
-gesture_net.load_state_dict(torch.load(PATH))
-gesture_net.eval()
-
-# Modes:
-# Each mode is a different method of interaction with the system.
-# Any given functionality might require the use of multiple modes
-# The first index represents the current mode. When mode is switched, the list is cycled.
-# 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
-#             E.g. left click, right click, scroll
-# 2. Gesture -> WIP
-MODES = ['mouse', 'gesture']
-
-# Fetching gesture mapping
-with open('gesture_mapping.json', 'r') as jsonfile:
-    gesture_mapping = json.load(jsonfile)
-
-# Modules:
-# Mouse Tracking - responsible for tracking and moving the cursor
-# Config Detection - takes in the keypoints and outputs a configuration
-# i.e. ['straight','straight', 'bent', 'bent', 'bent'] (subject to change)
-# Config Action - takes in a configuration and maps it to an action i.e. LeftClick
-
-while True:
-    data = sock.recv()
-    landmarkList.ParseFromString(data)
-    landmarks = []
-    for lmark in landmarkList.landmark:
-        landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
-
-    # Handedness - true if right hand, false if left
-    handedness = landmarkList.handedness
-
-    # The mouse tracking module is only called if the current mode is 'mouse'
-    if MODES[0] == 'mouse':
-        ##################
-        # Mouse Tracking #
-        ##################
-
-        # get pointer location
-        mouse_pointer, pointer_buffer = calc_pointer(landmarks, pointer_buffer)
-
-        # control the mouse
-        prev_pointer = mouse_track(mouse_pointer, prev_pointer, FLAGS)
+    # array of flags for mouse control
+    FLAGS = {'mousedown':False, 'scroll':False}
+    THRESHOLD = 100
 
 
-    ####################
-    # Config Detection #
-    ####################
+    OUTPUT_CLASSES = 6
+    INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
+    PATH = 'models/gesture_net'
 
-    input_data = format_landmark(landmarks, handedness, INPUT_DIM)
-    GESTURE = get_gesture(gesture_net, gesture_mapping, input_data)
+    # Setting up network
+    gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
+    gesture_net.load_state_dict(torch.load(PATH))
+    gesture_net.eval()
 
-    #################
-    # Config Action #
-    #################
+    # Modes:
+    # Each mode is a different method of interaction with the system.
+    # Any given functionality might require the use of multiple modes
+    # The first index represents the current mode. When mode is switched, the list is cycled.
+    # 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
+    #             E.g. left click, right click, scroll
+    # 2. Gesture -> WIP
+    MODES = ['mouse', 'gesture']
 
-    FLAGS, MODES = config_action(GESTURE, FLAGS, MODES)
+    # Fetching gesture mapping
+    with open('gesture_mapping.json', 'r') as jsonfile:
+        gesture_mapping = json.load(jsonfile)
 
-    ITER_COUNT += 1
+    # Modules:
+    # Mouse Tracking - responsible for tracking and moving the cursor
+    # Config Detection - takes in the keypoints and outputs a configuration
+    # i.e. ['straight','straight', 'bent', 'bent', 'bent'] (subject to change)
+    # Config Action - takes in a configuration and maps it to an action i.e. LeftClick
+
+    while True:
+        data = sock.recv()
+        landmarkList.ParseFromString(data)
+        landmarks = []
+        for lmark in landmarkList.landmark:
+            landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
+
+        # Handedness - true if right hand, false if left
+        handedness = landmarkList.handedness
+
+        # The mouse tracking module is only called if the current mode is 'mouse'
+        if MODES[0] == 'mouse':
+            ##################
+            # Mouse Tracking #
+            ##################
+
+            # get pointer location
+            mouse_pointer, pointer_buffer = calc_pointer(landmarks, pointer_buffer, ITER_COUNT)
+
+            # control the mouse
+            prev_pointer = mouse_track(mouse_pointer, prev_pointer, FLAGS)
+
+
+        ####################
+        # Config Detection #
+        ####################
+
+        input_data = format_landmark(landmarks, handedness, INPUT_DIM)
+        GESTURE = get_gesture(gesture_net, gesture_mapping, input_data)
+
+        #################
+        # Config Action #
+        #################
+
+        FLAGS, MODES = config_action(GESTURE, FLAGS, MODES)
+
+        ITER_COUNT += 1
+
+
+if __name__ == '__main__':
+    main()
