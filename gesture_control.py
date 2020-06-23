@@ -105,7 +105,6 @@ def get_gesture(net, mapping, landmarks):
     # doubling the likelihood of the bad gesture to prevent misclassification
     gesture_dict['bad'] *= 2
     gesture = max(gesture_dict, key=gesture_dict.get)
-    #print(max(gesture_dict, key=gesture_dict.get), gesture_dict[max(gesture_dict, key=gesture_dict.get)])
     return gesture
 
 
@@ -114,28 +113,28 @@ def get_gesture(net, mapping, landmarks):
 # Config Action #
 #################
 
-def config_action(config, flags, mode):
+def config_action(config, flags, modes):
     '''
     Given a configuration, decides what action to perform.
-    Returns a flag based on whether the left mouse button is pressed or not
+    Modifies an array of flags based on what buttons are clicked
     bad -> invalid gesture
     seven -> left mouse down
     four -> right mouse down
     eight -> double click
     spiderman -> scroll
+    hitchhike -> mode switch
     '''
     if config == 'bad':
         pyautogui.mouseUp()
         flags['mousedown'] = False
         flags['scroll'] = False
-        return flags, mode
     elif config == 'hitchhike':
-        return flags, 'gesture'
+        # Rotating list
+        modes = modes[-1:] + modes[:-1]
     elif config == 'seven':
         pyautogui.mouseDown()
         flags['mousedown'] = True
         flags['scroll'] = False
-        return flags, mode
     else:
         pyautogui.mouseUp()
         flags['mousedown'] = False
@@ -145,7 +144,7 @@ def config_action(config, flags, mode):
             pyautogui.doubleClick()
         else: #spiderman
             flags['scroll'] = True
-        return flags, mode
+    return flags, modes
 
 
 ########
@@ -185,10 +184,11 @@ gesture_net.eval()
 # Modes:
 # Each mode is a different method of interaction with the system.
 # Any given functionality might require the use of multiple modes
+# The first index represents the current mode. When mode is switched, the list is cycled.
 # 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
 #             E.g. left click, right click, scroll
 # 2. Gesture -> WIP
-MODE = 'mouse'
+MODES = ['mouse', 'gesture']
 
 # Fetching gesture mapping
 with open('gesture_mapping.json', 'r') as jsonfile:
@@ -211,7 +211,7 @@ while True:
     handedness = landmarkList.handedness
 
     # The mouse tracking module is only called if the current mode is 'mouse'
-    if MODE == 'mouse':
+    if MODES[0] == 'mouse':
         ##################
         # Mouse Tracking #
         ##################
@@ -234,6 +234,6 @@ while True:
     # Config Action #
     #################
 
-    FLAGS, MODE = config_action(GESTURE, FLAGS, MODE)
+    FLAGS, MODES = config_action(GESTURE, FLAGS, MODES)
 
     ITER_COUNT += 1
