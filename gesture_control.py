@@ -3,7 +3,6 @@ This script receives the hand keypoints detected by the mediapipe through
 zmq/protobuf and then uses them to control the mouse through pyautogui.
 '''
 
-import math
 import json
 import zmq
 import pyautogui
@@ -22,6 +21,42 @@ def get_avg_pointer_loc(pointer_buffer):
     x = [i[0] for i in pointer_buffer]
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
+
+
+def calc_pointer(landmarks, pointer_buffer):
+    ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
+
+    # The tip of the index pointer is the eighth landmark in the list
+    index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
+
+    # Screen resolution
+    resolution = pyautogui.size().width, pyautogui.size().height
+    scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
+
+    pointer_buffer[ITER_COUNT%5] = scaled_pointer
+    actual_pointer = get_avg_pointer_loc(pointer_buffer)
+
+    return actual_pointer, pointer_buffer
+
+
+def mouse_track(current_pointer, prev_pointer, FLAGS):
+    '''
+    Performs mouse actions depending on the FLAGS that have been set.
+    prev_pointer is only modified if the mouse is up and we are not scrolling.
+    '''
+
+    # If mouse is down and movement below threshold, do not move the mouse
+    if FLAGS['mousedown'] and (abs(current_pointer[0] - prev_pointer[0]) +
+                        abs(current_pointer[1] - prev_pointer[1]) < THRESHOLD):
+        return prev_pointer
+    elif FLAGS['scroll']:
+        amt_to_scroll = (current_pointer[1] - prev_pointer[1])/10
+        pyautogui.scroll(amt_to_scroll)
+        return prev_pointer
+    else:
+        pyautogui.moveTo(current_pointer[0], current_pointer[1], 0)
+        return current_pointer
+
 
 ####################
 # Config Detection #
@@ -79,7 +114,7 @@ def get_gesture(net, mapping, landmarks):
 # Config Action #
 #################
 
-def config_action(config, flags):
+def config_action(config, flags, mode):
     '''
     Given a configuration, decides what action to perform.
     Returns a flag based on whether the left mouse button is pressed or not
@@ -93,12 +128,14 @@ def config_action(config, flags):
         pyautogui.mouseUp()
         flags['mousedown'] = False
         flags['scroll'] = False
-        return flags
+        return flags, mode
+    elif config == 'hitchhike':
+        return flags, 'gesture'
     elif config == 'seven':
         pyautogui.mouseDown()
         flags['mousedown'] = True
         flags['scroll'] = False
-        return flags
+        return flags, mode
     else:
         pyautogui.mouseUp()
         flags['mousedown'] = False
@@ -108,7 +145,7 @@ def config_action(config, flags):
             pyautogui.doubleClick()
         else: #spiderman
             flags['scroll'] = True
-        return flags
+        return flags, mode
 
 
 ########
@@ -136,7 +173,7 @@ FLAGS = {'mousedown':False, 'scroll':False}
 THRESHOLD = 100
 
 
-OUTPUT_CLASSES = 5
+OUTPUT_CLASSES = 6
 INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
 PATH = 'models/gesture_net'
 
@@ -144,6 +181,14 @@ PATH = 'models/gesture_net'
 gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
 gesture_net.load_state_dict(torch.load(PATH))
 gesture_net.eval()
+
+# Modes:
+# Each mode is a different method of interaction with the system.
+# Any given functionality might require the use of multiple modes
+# 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
+#             E.g. left click, right click, scroll
+# 2. Gesture -> WIP
+MODE = 'mouse'
 
 # Fetching gesture mapping
 with open('gesture_mapping.json', 'r') as jsonfile:
@@ -165,38 +210,23 @@ while True:
     # Handedness - true if right hand, false if left
     handedness = landmarkList.handedness
 
-    ##################
-    # Mouse Tracking #
-    ##################
+    # The mouse tracking module is only called if the current mode is 'mouse'
+    if MODE == 'mouse':
+        ##################
+        # Mouse Tracking #
+        ##################
 
-    # The tip of the index pointer is the eighth landmark in the list
-    index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
+        # get pointer location
+        mouse_pointer, pointer_buffer = calc_pointer(landmarks, pointer_buffer)
 
-    # Screen resolution
-    resolution = pyautogui.size().width, pyautogui.size().height
-    scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
+        # control the mouse
+        prev_pointer = mouse_track(mouse_pointer, prev_pointer, FLAGS)
 
-    pointer_buffer[ITER_COUNT%5] = scaled_pointer
-    actual_pointer = get_avg_pointer_loc(pointer_buffer)
-
-    # if mouse is down and movement below threshold, do not move the mouse
-    if FLAGS['mousedown'] and (abs(actual_pointer[0] - prev_pointer[0]) +
-                           abs(actual_pointer[1] - prev_pointer[1]) < THRESHOLD):
-        pass
-    elif FLAGS['scroll']:
-        amt_to_scroll = (actual_pointer[1] - prev_pointer[1])/10
-        pyautogui.scroll(amt_to_scroll)
-    else:
-        pyautogui.moveTo(actual_pointer[0], actual_pointer[1], 0)
-        prev_pointer = actual_pointer
 
     ####################
     # Config Detection #
     ####################
 
-    #angles = calculate_angles(landmarks)
-    #gesture = get_configuration(angles)
-    #print(gesture)
     input_data = format_landmark(landmarks, handedness, INPUT_DIM)
     GESTURE = get_gesture(gesture_net, gesture_mapping, input_data)
 
@@ -204,6 +234,6 @@ while True:
     # Config Action #
     #################
 
-    FLAGS = config_action(GESTURE, FLAGS)
+    FLAGS, MODE = config_action(GESTURE, FLAGS, MODE)
 
     ITER_COUNT += 1
