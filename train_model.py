@@ -131,7 +131,7 @@ test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
 # TRAINING #
 ############
 
-OUTPUT_CLASSES = 5
+OUTPUT_CLASSES = 6
 INPUT_DIM = 49 #refer make_vector() to verify input dimensions
 
 gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
