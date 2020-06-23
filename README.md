@@ -3,7 +3,9 @@
 
 Built on top of [mediapipe](https://github.com/google/mediapipe), this repo aims to be a tool to navigate a computer through hand gestures. The hand keypoints are detected using google's mediapipe. These keypoints are then fed into a Python script through [ZeroMQ](https://zeromq.org) and [protobuf](https://developers.google.com/protocol-buffers) for further use. 
 
-The keypoint of the tip of the index finger is extracted in the Python script, and, through pyautogui, used to control the mouse. A neural network trained on the included dataset classifies gestures and actions are performed based on this classification. [WIP]
+The keypoint of the tip of the index finger is extracted in the Python script, and, through pyautogui, used to control the mouse. A neural network trained on the included dataset classifies gestures and actions are performed based on this classification.
+
+For more advanced gestures, the concept of **modes** is utilized. You can switch from the *mouse* mode to the *gesture* mode for gestures to control audio, brightness etc. [Work in progress]
 
 The code consists of a few distinct pieces which are:
 
@@ -17,17 +19,23 @@ The code consists of a few distinct pieces which are:
 
 A visualization of the various modules : 
 
-![module visualization](Flowchart.png)
+![module visualization](images/Flowchart.png)
 
 ### Gestures
 
-1. *Mouse control* -> Move index finger
-2. *Left Mouse Down* -> Thumb and index straight, other fingers bent (i.e. the hand gesture for the number 7)
-3. *Right Mouse Down* -> Thumb folded (gesture for four)
-4. *Double Click* -> Ring and little finger bent (gesture for eight)
-5. *Scroll* -> Middle and ring finger bent (the spiderman gesture)
+*Note*: 
+* In **mouse** mode, the mouse is tracked simply by moving the index finger. 
+* Mode Switch is a work in progress.
+* A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
 
-E.g. A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
+
+| Gesture name   | Gesture Action   | Image                               |
+| -------------- | ---------------- | --------------------------------    |
+| seven          | Left Mouse Down  | ![seven](images/seven2.png)         |
+| eight          | Double Click     | ![eight](images/eight2.png)         |
+| four           | Right Mouse Down | ![four](images/four2.png)           |
+| spiderman      | Scroll           | ![spiderman](images/spiderman2.png) |
+| hitchhike      | Mode Switch      | ![hitchhike](images/hitchhike2.png) |
 
 ### Requirements
 
