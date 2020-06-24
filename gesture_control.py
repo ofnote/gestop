@@ -127,8 +127,8 @@ def config_action(config, flags, modes, config_buffer, iter_count):
     hitchhike -> mode switch
     '''
     valid = valid_config(config, config_buffer) #check if valid gesture
+    # print(config_buffer, config, valid)
     config_buffer[iter_count%5] = config  #adding the new config to the buffer
-    print(config_buffer)
     if config == 'bad' or not valid:
         pyautogui.mouseUp()
         flags['mousedown'] = False
@@ -158,7 +158,7 @@ def valid_config(config, config_buffer):
     For most gestures, if it is present, then that makes it an invalid gesture.
     This is to prevent multiple gesture detections in a short span of time.
     '''
-    if config == 'bad' or 'seven': # these gestures are always valid, even if repeated
+    if config in ['bad', 'seven']: # these gestures are always valid, even if repeated
         return True
     if config in config_buffer: # repeated gesture
         return False
