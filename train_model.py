@@ -57,27 +57,32 @@ def make_vector(dataset):
             formatted[i][3*j] = row[3*j+3] - row[3*j] #L__X
             formatted[i][3*j+1] = row[3*j+4] - row[3*j+1] #L__Y
             formatted[i][3*j+2] = row[3*j+5] - row[3*j+2] #L__Z
+            # formatted[i][3*j+2] = 0
 
         for j in range(3):
             # calculate L56, L67, L78
             formatted[i][3*j+12] = row[3*j+18] - row[3*j+15]
             formatted[i][3*j+13] = row[3*j+19] - row[3*j+16]
             formatted[i][3*j+14] = row[3*j+20] - row[3*j+17]
+            # formatted[i][3*j+14] = 0
 
             # calculate L910, L1011, L1112
             formatted[i][3*j+21] = row[3*j+30] - row[3*j+27]
             formatted[i][3*j+22] = row[3*j+31] - row[3*j+28]
             formatted[i][3*j+23] = row[3*j+32] - row[3*j+29]
+            # formatted[i][3*j+23] = 0
 
             # calculate L1314, L1415, L1516
             formatted[i][3*j+30] = row[3*j+42] - row[3*j+39]
             formatted[i][3*j+31] = row[3*j+43] - row[3*j+40]
             formatted[i][3*j+32] = row[3*j+44] - row[3*j+41]
+            # formatted[i][3*j+32] = 0
 
             # calculate L1718, L1819, L1920
             formatted[i][3*j+39] = row[3*j+54] - row[3*j+51]
             formatted[i][3*j+40] = row[3*j+55] - row[3*j+52]
             formatted[i][3*j+41] = row[3*j+56] - row[3*j+53]
+            # formatted[i][3*j+41] = 0
 
         formatted[i][48] = row['HAND']
         i += 1

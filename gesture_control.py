@@ -45,9 +45,11 @@ def mouse_track(current_pointer, prev_pointer, FLAGS):
     prev_pointer is only modified if the mouse is up and we are not scrolling.
     '''
 
+    threshold = 100
+
     # If mouse is down and movement below threshold, do not move the mouse
     if FLAGS['mousedown'] and (abs(current_pointer[0] - prev_pointer[0]) +
-                        abs(current_pointer[1] - prev_pointer[1]) < THRESHOLD):
+                               abs(current_pointer[1] - prev_pointer[1]) < threshold):
         return prev_pointer
     elif FLAGS['scroll']:
         amt_to_scroll = (current_pointer[1] - prev_pointer[1])/10
@@ -113,7 +115,7 @@ def get_gesture(net, mapping, landmarks):
 # Config Action #
 #################
 
-def config_action(config, flags, modes):
+def config_action(config, flags, modes, config_buffer, iter_count):
     '''
     Given a configuration, decides what action to perform.
     Modifies an array of flags based on what buttons are clicked
@@ -124,7 +126,10 @@ def config_action(config, flags, modes):
     spiderman -> scroll
     hitchhike -> mode switch
     '''
-    if config == 'bad':
+    valid = valid_config(config, config_buffer) #check if valid gesture
+    config_buffer[iter_count%5] = config  #adding the new config to the buffer
+    print(config_buffer)
+    if config == 'bad' or not valid:
         pyautogui.mouseUp()
         flags['mousedown'] = False
         flags['scroll'] = False
@@ -144,7 +149,20 @@ def config_action(config, flags, modes):
             pyautogui.doubleClick()
         else: #spiderman
             flags['scroll'] = True
-    return flags, modes
+    return flags, modes, config_buffer
+
+
+def valid_config(config, config_buffer):
+    '''
+    Checks whether the gesture performed is in the config buffer i.e. recently performed.
+    For most gestures, if it is present, then that makes it an invalid gesture.
+    This is to prevent multiple gesture detections in a short span of time.
+    '''
+    if config == 'bad' or 'seven': # these gestures are always valid, even if repeated
+        return True
+    if config in config_buffer: # repeated gesture
+        return False
+    return True
 
 
 ########
@@ -152,6 +170,8 @@ def config_action(config, flags, modes):
 ########
 
 def main():
+    ''' The main function '''
+
     # allow mouse to move to edge of screen, and set interval between calls to 0.01
     pyautogui.FAILSAFE = False
     pyautogui.PAUSE = 0.01
@@ -166,12 +186,12 @@ def main():
     # maintain a buffer of most recent movements to smoothen mouse movement
     pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
     prev_pointer = 0, 0
+    # maintain a buffer of most recently detected configs
+    config_buffer = ['', '', '', '', '']
     ITER_COUNT = 0
 
     # array of flags for mouse control
-    FLAGS = {'mousedown':False, 'scroll':False}
-    THRESHOLD = 100
-
+    FLAGS = {'mousedown': False, 'scroll': False}
 
     OUTPUT_CLASSES = 6
     INPUT_DIM = 49 #refer make_vector() in model.py to verify input dimensions
@@ -235,7 +255,7 @@ def main():
         # Config Action #
         #################
 
-        FLAGS, MODES = config_action(GESTURE, FLAGS, MODES)
+        FLAGS, MODES, config_buffer = config_action(GESTURE, FLAGS, MODES, config_buffer, ITER_COUNT)
 
         ITER_COUNT += 1
 
