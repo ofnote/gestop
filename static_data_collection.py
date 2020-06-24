@@ -55,7 +55,7 @@ def main():
     ROWS_ADDED = 0
     NSAMPLES = 1000
 
-    f = open("gestures_data.csv", 'a+')
+    f = open("static_gestures_data.csv", 'a+')
     #set pointer at beginning of file
     f.seek(0)
 

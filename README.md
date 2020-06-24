@@ -14,7 +14,7 @@ The code consists of a few distinct pieces which are:
 * Config detection - Takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
 * Config action - Uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
 
-[*Demo video link*](https://drive.google.com/file/d/1UmL5u6LCbpAZFdJM46QpT9r7uGjbP4Mz/view)
+### [Demo video link](https://drive.google.com/file/d/1UmL5u6LCbpAZFdJM46QpT9r7uGjbP4Mz/view)
 
 
 A visualization of the various modules : 
@@ -95,12 +95,13 @@ python gestures-mediapipe/gesture_control.py
 * models -> Stores the trained model(s) which can be called by other files for inference
 * proto -> Holds the definitions of the protobufs used in the project for data transfer
 * BUILD -> Various build instructions for Bazel
-* `data_collection.py` -> Script to create dataset 
-* `gestures_mapping.json` -> Stores the encoding of the gestures as integers
-* `hand_tracking_desktop_live.pbtxt` -> Definition of the mediapipe calculators being used. Check out mediaipe for more details
+* `static_data_collection.py` -> Script to create static gesture dataset 
+* `data/gestures_mapping.json` -> Stores the encoding of the gestures as integers
+* `data/static_gestures_data.csv` -> Dataset created with data_collection.py 
+* `hand_tracking_desktop_live.pbtxt` -> Definition of the mediapipe calculators being used. Check out mediaipe for more details.
 * `hand_tracking_landmarks.cc` -> Source code for the mediapipe executable. GPU version is Linux only.
 * `model.py` -> Declaration of the model(s) used.
-* `train_model.py` -> Trains the "GestureNet" model and saves to disk
+* `train_model.py` -> Trains the "GestureNet" model for static gestures and saves to disk
 * `gesture_control.py` -> Heart of the project, code to interface with the system using gestures.
 
 

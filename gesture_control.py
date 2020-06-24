@@ -158,7 +158,7 @@ def valid_config(config, config_buffer):
     For most gestures, if it is present, then that makes it an invalid gesture.
     This is to prevent multiple gesture detections in a short span of time.
     '''
-    if config in ['bad', 'seven']: # these gestures are always valid, even if repeated
+    if config in ['bad', 'seven', 'spiderman']: # these gestures are always valid, even if repeated
         return True
     if config in config_buffer: # repeated gesture
         return False
@@ -212,7 +212,7 @@ def main():
     MODES = ['mouse', 'gesture']
 
     # Fetching gesture mapping
-    with open('gesture_mapping.json', 'r') as jsonfile:
+    with open('data/gesture_mapping.json', 'r') as jsonfile:
         gesture_mapping = json.load(jsonfile)
 
     # Modules:
