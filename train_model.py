@@ -94,6 +94,7 @@ def calc_accuracy(ans, pred):
     return np.sum(np.equal(pred, ans)) / len(ans)
 
 def main():
+    ''' Main '''
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     EPOCHS = 10
     SEED_VAL = 42

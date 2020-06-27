@@ -102,6 +102,7 @@ python gestures-mediapipe/gesture_control.py
 * `hand_tracking_landmarks.cc` -> Source code for the mediapipe executable. GPU version is Linux only.
 * `model.py` -> Declaration of the model(s) used.
 * `train_model.py` -> Trains the "GestureNet" model for static gestures and saves to disk
+* `dynamic_train_model.py` -> Transforms and loads data from the SHREC dataset, trains a neural network and saves to disk. 
 * `gesture_control.py` -> Heart of the project, code to interface with the system using gestures.
 
 
