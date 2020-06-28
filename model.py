@@ -115,7 +115,6 @@ def variable_length_collate(batch):
     for i, (inp, tar) in enumerate(batch):
         data_lengths[i] = inp.shape[0]
         target[i] = tar
-    # target = torch.unsqueeze(target, 0)
     return data, target, data_lengths
 
 

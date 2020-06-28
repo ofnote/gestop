@@ -8,13 +8,15 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
-from model import ShrecNet, ShrecDataset
+from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.callbacks import EarlyStopping
+from model import ShrecNet, ShrecDataset#, variable_length_collate
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
+    seed_everything(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -86,7 +88,7 @@ def read_data(seed_val):
     gesture_dir = ['gesture_'+str(i) for i in range(1, 15)]
     gesture_arr = []
     target_arr = []
-    gesture_no = 1
+    gesture_no = 0
 
     for gesture in [os.path.join(base_directory, i) for i in gesture_dir]: # for each gesture
         for finger in ['/finger_1', '/finger_2']:
@@ -102,11 +104,8 @@ def read_data(seed_val):
 def main():
     ''' Main '''
 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    EPOCHS = 10
     SEED_VAL = 42
     init_seed(SEED_VAL)
-    writer = SummaryWriter('logs')
 
     ##################
     # INPUT PIPELINE #
@@ -119,16 +118,35 @@ def main():
         transforms.Lambda(normalize),
         transforms.Lambda(format_mediapipe),
     ])
-    train_loader = DataLoader(ShrecDataset(train_x, train_y, transform))
-    test_loader = DataLoader(ShrecDataset(test_x, test_y, transform))
+
+    #FIXME -> fix variable_length_collate such that batches can be used.
+    train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
+                              num_workers=10)#, batch_size=16, collate_fn=variable_length_collate)
+    val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
+                            num_workers=10)#, batch_size=16, collate_fn=variable_length_collate)
 
     ############
     # TRAINING #
     ############
 
-    for batch_no, batch in enumerate(train_loader):
-        input_data = batch[0].to(device)
-        target = batch[1].to(device)
+    input_dim = 74
+    output_classes = 14
+
+    model = ShrecNet(input_dim, output_classes)
+    early_stopping = EarlyStopping(
+        patience=3,
+        verbose=True,
+    )
+
+    trainer = Trainer(gpus=1,
+                      deterministic=True,
+                      default_root_dir='logs',
+                      early_stop_callback=early_stopping)
+    trainer.fit(model, train_loader, val_loader)
+
+    PATH = 'models/shrec_net'
+    torch.save(model.state_dict(), PATH)
+
 
 
 if __name__ == '__main__':
