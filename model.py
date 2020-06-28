@@ -1,10 +1,18 @@
 '''
-Contains the declaration of the neural network(s) used in the application.
+Contains the declaration of the neural network(s)
+and their corresponding datasets.
+GestureNet -> A simple FFN to classify static gestures
+ShrecNet -> A GRU network which classifies dynamic gestures with data from SHREC
 '''
 
+import time
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+#from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+from pytorch_lightning.core.lightning import LightningModule
 
 class GestureNet(nn.Module):
     '''
@@ -34,20 +42,81 @@ class GestureDataset(Dataset):
     def __getitem__(self, index):
         return (self.input_data[index], self.target[index])
 
-class ShrecNet(nn.Module):
+class ShrecNet(LightningModule):
     '''
-    The description of the model which recognizes dynamic hand gestures given a sequence of keypoints
+    The description of the model which recognizes dynamic hand gestures
+    given a sequence of keypoints. Consists of a bidirectional GRU connected
+    to a fully conncted layer.
     '''
     def __init__(self, input_dim, output_classes):
         super(ShrecNet, self).__init__()
 
-        self.fc1 = nn.Linear(input_dim, 64)
-        self.fc2 = nn.Linear(64, output_classes)
+        self.hidden_dim = 128
+        self.gru = nn.GRU(input_size=input_dim, hidden_size=self.hidden_dim,
+                          bidirectional=True, batch_first=True)
+        self.fc1 = nn.Linear(self.hidden_dim*2, self.hidden_dim)
+        self.fc2 = nn.Linear(self.hidden_dim, output_classes)
+        self.time = time.time()
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        out, h = self.gru(x)
+        # out = pad_packed_sequence(out, batch_first=True)[0] #FIXME
+        last_out = out[:, -1]
+        last_out = F.leaky_relu(last_out)
+        last_out = F.leaky_relu(self.fc1(last_out))
+        last_out = F.leaky_relu(self.fc2(last_out))
+        return last_out
+
+    def training_step(self, batch, batch_idx):
+        # x, y, data_len = batch
+        x, y = batch
+
+        #FIXME
+        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        # output = self(x_packed)
+        output = self(x)
+
+        loss = F.cross_entropy(output, y.long())
+        tensorboard_logs = {'train_loss': loss}
+        return {'loss': loss, 'log': tensorboard_logs}
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.001)
+
+    def validation_step(self, batch, batch_idx):
+        # x, y, data_len = batch
+        x, y = batch
+
+        #FIXME
+        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        # output = self(x_packed)
+        output = self(x)
+
+        return {'val_loss': F.cross_entropy(output, y.long()),
+                'val_acc': np.argmax(output[0].cpu().numpy()) == y}
+
+    def validation_epoch_end(self, outputs):
+        epochtime = time.time() - self.time
+        self.time = time.time()
+
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
+        tensorboard_logs = {'val_loss': avg_loss, 'epoch_time': epochtime, 'val_acc': avg_acc}
+        return {'val_loss': avg_loss, 'log': tensorboard_logs}
+
+#FIXME
+def variable_length_collate(batch):
+    ''' Custom collate function to handle variable length sequences. '''
+    target = torch.empty(len(batch))
+    data_lengths = torch.empty(len(batch))
+    data = [batch[i][0] for i in range(len(batch))]
+    data = pad_sequence(data, batch_first=True)
+
+    for i, (inp, tar) in enumerate(batch):
+        data_lengths[i] = inp.shape[0]
+        target[i] = tar
+    # target = torch.unsqueeze(target, 0)
+    return data, target, data_lengths
 
 
 class ShrecDataset(Dataset):
