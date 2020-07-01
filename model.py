@@ -13,6 +13,8 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 #from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from pytorch_lightning.core.lightning import LightningModule
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 class GestureNet(nn.Module):
     '''
@@ -103,6 +105,31 @@ class ShrecNet(LightningModule):
         avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
         tensorboard_logs = {'val_loss': avg_loss, 'epoch_time': epochtime, 'val_acc': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+
+        output = self(x)
+
+        return {'test_acc': np.argmax(output[0].cpu().numpy()) == y,
+                'test_pred': np.argmax(output[0].cpu().numpy()),
+                'test_actual': y}
+
+    def test_epoch_end(self, outputs):
+        # print(torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()))
+        test_acc = torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()).mean()
+        test_pred = np.array([x['test_pred'] for x in outputs])
+        test_actual = torch.squeeze(torch.stack([x['test_actual'] for x in outputs])).cpu().numpy()
+
+        labels=['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
+                'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
+                'Swipe V', 'Shake']
+        conf_mat = confusion_matrix(test_actual, test_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
+        disp = disp.plot(include_values=True, cmap=plt.cm.Blues, ax=None, xticks_rotation='vertical')
+
+        plt.show()
+        return {'test_acc':test_acc}
 
 #FIXME
 def variable_length_collate(batch):
