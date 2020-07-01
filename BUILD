@@ -18,7 +18,6 @@ cc_binary(
     deps = [
         "//gestures-mediapipe:hand_tracking_landmarks_cpu",
         "//mediapipe/graphs/hand_tracking:desktop_tflite_calculators",
-        ":zeromq",
     ],
 )
 
@@ -32,11 +31,26 @@ proto_library(
     srcs = ["proto/landmarkList.proto"],
 )
 
+
 cc_import(
     name = "zeromq",
     hdrs = ["zmq.hpp"],
     shared_library = "libzmq.so",
 )
+
+#cc_library(
+#    name = "zeromq",
+#    #hdrs = ["zmq.hpp"],
+#    hdrs = glob(["*.hpp"]),
+#    visibility = ["//visibility:public"],
+#    srcs = ["libzmq.so"]
+
+#    includes = ["zmq.hpp"],
+#    #shared_library = "libzmq.so",
+#    srcs = [ 
+#        "cppzmq/zmq.hpp",
+#        "libzmq.so"],
+#)
 
 # Linux only.
 # Must have a GPU with EGL support:
