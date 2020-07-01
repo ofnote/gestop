@@ -5,9 +5,11 @@ Built on top of [mediapipe](https://github.com/google/mediapipe), this repo aims
 
 The keypoint of the tip of the index finger is extracted in the Python script, and, through pyautogui, used to control the mouse. A neural network trained on the included dataset classifies gestures and actions are performed based on this classification.
 
-For more advanced gestures, the concept of **modes** is utilized. You can switch from the *mouse* mode to the *gesture* mode for gestures to control audio, brightness etc. [Work in progress]
+For more advanced gestures involving a moving hand, the concept of **modes** is utilized. You can switch from the *mouse* mode to the *gesture* mode for gestures to control audio, brightness etc. With the use of a recurrent neural network (bidirectional GRU in this case), a dynamic gesture is captured and acted upon. [Work in Progress]
 
-The code consists of a few distinct pieces which are:
+The data for *static gestures* was collected mnaually with the help of a custom script(`static_data_collection.py`) whereas the data for *dynamic gestures* comes from the [SHREC2017 dataset](http://www-rech.telecom-lille.fr/shrec2017-hand/).
+
+The project consists of a few distinct pieces which are:
 
 * The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
 * Mouse tracking - Part of `gesture_control.py`, responsible for moving the cursor using the position of the index finger.
@@ -25,9 +27,10 @@ A visualization of the various modules :
 
 *Note*: 
 * In **mouse** mode, the mouse is tracked simply by moving the index finger. 
-* Mode Switch is a work in progress.
+* Dynamic gestures are only supported with right hand, as all data from SHREC is right hand only.
 * A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
 
+#### Static Gestures
 
 | Gesture name   | Gesture Action   | Image                               |
 | -------------- | ---------------- | --------------------------------    |
@@ -53,9 +56,13 @@ The protobuf module in Python must be installed, through the use of `pip` or you
 
 pyautogui is a GUI automation python module used, in this case, to simulate the movement of the mouse. As with other python packages, to be installed through `pip` or package manager e.g. `apt`. 
 
-* Pytorch
+* Pytorch and pytorch-lightning
 
-Used to train and deploy the neural net which recognizes gestures.
+Used to train and deploy the neural net which recognizes gestures. [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning), a lightweight wrapper over Pytorch for cleaner development, is also used.  
+
+* Standard libraries
+
+The standard libraries in machine learning projects, `numpy`, `pandas` and `scikit-learn` are also utilized.
 
 ### Usage
 
