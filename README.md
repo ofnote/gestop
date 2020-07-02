@@ -12,9 +12,9 @@ The data for *static gestures* was collected mnaually with the help of a custom 
 The project consists of a few distinct pieces which are:
 
 * The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
-* Mouse tracking - Part of `gesture_control.py`, responsible for moving the cursor using the position of the index finger.
-* Config detection - Takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
-* Config action - Uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
+* Mouse tracking - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
+* Config detection - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
+* Config action - See `gesture_executor.py`, uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
 
 ### [Demo video link](https://drive.google.com/file/d/1UmL5u6LCbpAZFdJM46QpT9r7uGjbP4Mz/view)
 
@@ -40,6 +40,19 @@ A visualization of the various modules :
 | spiderman      | Scroll           | ![spiderman](images/spiderman2.png) |
 | hitchhike      | Mode Switch      | ![hitchhike](images/hitchhike2.png) |
 
+#### Dynamic Gestures
+
+| Gesture name             | Gesture Action                     |
+| --------------           | ----------------                   |
+| Swipe Right              | Move to the workspace on the right |
+| Swipe Left               | Move to the workspace on the left  |
+| Swipe Up                 | Increase screen brightness         |
+| Swipe Down               | Decrease screen brightness         |
+| Rotate Clockwise         | Increase volume                    |
+| Rotate Counter Clockwise | Decrease volume                    |
+| Tap                      | Screenshot                         |
+| Grab                     | Mode Switch                        |
+
 ### Requirements
 
 As well as mediapipe's own requirements, there a few other things required for this project.
@@ -56,9 +69,17 @@ The protobuf module in Python must be installed, through the use of `pip` or you
 
 pyautogui is a GUI automation python module used, in this case, to simulate the movement of the mouse. As with other python packages, to be installed through `pip` or package manager e.g. `apt`. 
 
+* pynput
+
+pyautogui's keyboard functions were not enough for the requirements of the dynamic gestures, thus the python library pynput is also used.
+
 * Pytorch and pytorch-lightning
 
-Used to train and deploy the neural net which recognizes gestures. [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning), a lightweight wrapper over Pytorch for cleaner development, is also used.  
+Used to train and deploy the neural net which recognizes gestures. [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning), a lightweight wrapper over Pytorch for cleaner development, is also used.
+
+* xdotool
+
+Switching workspaces with dynamic gestures requires the command line utility `xdotool`
 
 * Standard libraries
 
@@ -93,7 +114,7 @@ GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_cpu --calculator_g
 #### Python Script
 
 ``` python
-python gestures-mediapipe/gesture_control.py
+python gestures-mediapipe/gesture_receiver.py
 
 ```
 
@@ -105,12 +126,18 @@ python gestures-mediapipe/gesture_control.py
 * `static_data_collection.py` -> Script to create static gesture dataset 
 * `data/gestures_mapping.json` -> Stores the encoding of the gestures as integers
 * `data/static_gestures_data.csv` -> Dataset created with data_collection.py 
+* `data/dynamic_gestures_mapping.json` -> Stores the encoding of the dynamic gestures as integers
 * `hand_tracking_desktop_live.pbtxt` -> Definition of the mediapipe calculators being used. Check out mediaipe for more details.
 * `hand_tracking_landmarks.cc` -> Source code for the mediapipe executable. GPU version is Linux only.
 * `model.py` -> Declaration of the model(s) used.
 * `train_model.py` -> Trains the "GestureNet" model for static gestures and saves to disk
 * `dynamic_train_model.py` -> Transforms and loads data from the SHREC dataset, trains a neural network and saves to disk. 
-* `gesture_control.py` -> Heart of the project, code to interface with the system using gestures.
+* `find_keycode.py` -> A sample program from pynput used to find the keycode of the key that was pressed. Useful in case the brightness and audio keys vary.
+* `gesture_control.py` -> Heart of the project, code to interface with the system using gestures. (DEPRECATED)
+* `gesture_receiver.py` -> Handles the stream of data coming from the mediapipe executable by passing it to the various other modules.
+* `mouse_tracker.py` -> Functions which implement mouse tracking.
+* `gesture_recognizer.py` -> Functions which use the trained neural networks to recognize gestures from keypoints.
+* `gesture_executor.py` -> Functions which implement the end action with an input gesture. E.g. Left Click, Reduce Screen Brightness
 
 
 ### Useful Information
