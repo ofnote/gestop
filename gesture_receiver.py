@@ -97,7 +97,7 @@ def initialize_gesture_recognizer():
 
     # maintain a buffer of most recently detected configs
     C['static_config_buffer'] = ['', '', '', '', '']
-    C['dynamic_config_buffer'] = ['' for i in range(60)]
+    C['dynamic_config_buffer'] = ['' for i in range(30)]
     #number of iterations
     C['iter'] = 0
 
@@ -186,7 +186,7 @@ def handle_zmq_stream():
 
         C = config_action(gesture, C)
         if mode != C['modes'][0]:  #mode switch
-            #emoty buffer
+            #empty buffer
             C['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
 
         C['iter'] += 1

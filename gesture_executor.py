@@ -63,10 +63,9 @@ def config_dynamic_action(config, C):
     Pinch/Expand -> Zoom in/out
     '''
     valid = valid_config(config, C['dynamic_config_buffer']) #check if valid gesture
-    C['dynamic_config_buffer'][C['iter']%60] = config  #adding the new config to the buffer
+    C['dynamic_config_buffer'][C['iter']%30] = config  #adding the new config to the buffer
     keyboard = Controller()
 
-    print(config)
     if config in ['Shake', 'bad'] or not valid:
         pass
     elif config in ['Swipe Left', 'Swipe Right']:

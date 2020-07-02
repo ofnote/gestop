@@ -120,7 +120,7 @@ def get_dynamic_gesture(landmarks, C):
     # Will stop being true after buffer_len iterations.
     # Also predict only once in 30 frames.
     if (C['keypoint_buffer'][0] == torch.zeros(len(C['keypoint_buffer'][0]))).all() \
-       or C['iter'] % 30 != 0:
+       or C['iter'] % 20 != 0:
         return 'bad', C
 
 
