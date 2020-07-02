@@ -62,9 +62,12 @@ DEFINE_string(output_video_path, "",
 //#define SERVER_IP "192.168.0.107"
 #endif
 
+
+
 int connect_to_server() {
     int sock = 0, valread; 
     struct sockaddr_in serv_addr;
+    printf("%s", SERVER_IP);
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
@@ -206,6 +209,9 @@ int connect_to_server() {
 #else
     //send(sock , hello , strlen(hello) , 0 ); 
     //printf(output.c_str());
+    const uint32_t size = output.size();
+    //printf("size = %d\n", sizeof(size));
+    send(sock, &size, sizeof (size), 0);
     send(sock, output.c_str(), output.size(), 0);
 #endif
     
