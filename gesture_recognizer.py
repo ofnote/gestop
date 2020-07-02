@@ -6,9 +6,9 @@ given a set of landmarks.
 import numpy as np
 import torch
 
-def format_landmark(landmark, hand, C):
+def format_landmark(landmark, hand, C, mode):
     ''' A wrapper over formt_static_landmark and format_dynamic_landmark. '''
-    if C['modes'][0] == 'mouse':
+    if mode == 'mouse':
         return format_static_landmark(landmark, hand, C['static_input_dim'])
     else:
         return format_dynamic_landmark(landmark, C['dynamic_input_dim'])
@@ -82,12 +82,12 @@ def format_dynamic_landmark(landmark, input_dim):
     return formatted_landmark
 
 
-def get_gesture(landmarks, C):
+def get_gesture(landmarks, C, S):
     ''' A wrapper over get_static_gesture and get_dynamic_gesture. '''
-    if C['modes'][0] == 'mouse':
-        return get_static_gesture(landmarks, C)
+    if S['modes'][0] == 'mouse':
+        return get_static_gesture(landmarks, C), S
     else:
-        return get_dynamic_gesture(landmarks, C)
+        return get_dynamic_gesture(landmarks, C, S)
 
 
 def get_static_gesture(landmarks, C):
@@ -102,10 +102,10 @@ def get_static_gesture(landmarks, C):
     # doubling the likelihood of the bad gesture to prevent misclassification
     gesture_dict['bad'] *= 2
     gesture = max(gesture_dict, key=gesture_dict.get)
-    return gesture, C
+    return gesture
 
 
-def get_dynamic_gesture(landmarks, C):
+def get_dynamic_gesture(landmarks, C, S):
     '''
     Detects a dynamic gesture using ShrecNet. Takes in a sequence of
     `DYNAMIC_BUFFER_LENGTH` keypoints and classifies it.
@@ -113,22 +113,22 @@ def get_dynamic_gesture(landmarks, C):
 
     # Left rotate buffer and replace last element,
     # essentially removing oldest and placing latest in the last position
-    C['keypoint_buffer'] = torch.roll(C['keypoint_buffer'], -1, dims=0)
-    C['keypoint_buffer'][-1] = torch.tensor(landmarks)
+    S['keypoint_buffer'] = torch.roll(S['keypoint_buffer'], -1, dims=0)
+    S['keypoint_buffer'][-1] = torch.tensor(landmarks)
 
     # if the first index is a zero array, we have just switched modes.
     # Will stop being true after buffer_len iterations.
     # Also predict only once in 30 frames.
-    if (C['keypoint_buffer'][0] == torch.zeros(len(C['keypoint_buffer'][0]))).all() \
-       or C['iter'] % 20 != 0:
+    if (S['keypoint_buffer'][0] == torch.zeros(len(S['keypoint_buffer'][0]))).all() \
+       or S['iter'] % 30 != 0:
         return 'bad', C
 
 
-    out = C['shrec_net'](torch.unsqueeze(C['keypoint_buffer'], axis=0))
+    out = C['shrec_net'](torch.unsqueeze(S['keypoint_buffer'], axis=0))
     gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
 
     # print(gesture_dict)
     # print(max(gesture_dict, key=gesture_dict.get))
     gesture = max(gesture_dict, key=gesture_dict.get)
 
-    return gesture, C
+    return gesture, S

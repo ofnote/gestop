@@ -3,13 +3,11 @@ Receives the data from mediapipe
 Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
-import json
-import pyautogui
 import torch
 import zmq
 from proto import landmarkList_pb2
-from model import GestureNet, ShrecNet
 
+from config import initialize_gesture_recognizer, initialize_state
 from mouse_tracker import mouse_track, calc_pointer
 from gesture_recognizer import format_landmark, get_gesture
 from gesture_executor import config_action
@@ -81,69 +79,43 @@ def get_landmarks(data, landmark_list):
 #     with socketserver.TCPServer((HOST, PORT), LandmarkHandler) as server:
 #         print(f'Server now listening {PORT}')
 #         server.serve_forever()
-def initialize_gesture_recognizer():
-    ''' Initialize the gesture recognizer for further use. '''
 
-    # Dictionary holding all useful variables, parameters.
-    C = {}
+def handle_and_recognize(landmarks, handedness, C, S):
+    '''
+    Given the keypoints from mediapipe
+    The mouse is tracked if the current mode is 'mouse'
+    A gesture is recognized, either static or dynamic
+    And the action corresponding to that gesture is executed.
+    '''
+    mode = S['modes'][0] #current mode
 
-    # allow mouse to move to edge of screen, and set interval between calls to 0.01
-    pyautogui.FAILSAFE = False
-    pyautogui.PAUSE = 0.01
+    if mode == 'mouse':
+        ##################
+        # Mouse Tracking #
+        ##################
 
-    # maintain a buffer of most recent movements to smoothen mouse movement
-    C['pointer_buffer'] = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
-    C['prev_pointer'] = 0, 0
+        # get pointer location
+        mouse_pointer, S = calc_pointer(landmarks, S)
+        # control the mouse
+        S = mouse_track(mouse_pointer, S)
 
-    # maintain a buffer of most recently detected configs
-    C['static_config_buffer'] = ['', '', '', '', '']
-    C['dynamic_config_buffer'] = ['' for i in range(30)]
-    #number of iterations
-    C['iter'] = 0
+    ####################
+    # Config Detection #
+    ####################
 
-    # array of flags for mouse control
-    C['flags'] = {'mousedown': False, 'scroll': False}
+    input_data = format_landmark(landmarks, handedness, C, mode)
+    gesture, S = get_gesture(input_data, C, S)
 
-    C['static_input_dim'] = 49 #refer make_vector() in model.py to verify input dimensions
-    C['static_output_classes'] = 6
+    #################
+    # Config Action #
+    #################
 
-    C['dynamic_input_dim'] = 74
-    C['dynamic_output_classes'] = 14
+    S = config_action(gesture, S)
+    if mode != S['modes'][0]:  #mode switch
+        # empty the buffer
+        S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
 
-
-    C['dynamic_buffer_length'] = 60
-    # maintain a buffer of most recently detected keypoints for dynamic gestures
-    C['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
-
-    # Modes:
-    # Each mode is a different method of interaction with the system.
-    # Any given functionality might require the use of multiple modes
-    # The first index represents the current mode. When mode is switched, the list is cycled.
-    # 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
-    #             E.g. left click, right click, scroll
-    # 2. Gesture -> Intuitive gesture are performed to do complicated actions, such as switch
-    #             worskpace, dim screen brightness etc.
-    C['modes'] = ['mouse', 'gesture']
-
-    # Fetching gesture mapping
-    with open('data/gesture_mapping.json', 'r') as jsonfile:
-        C['static_gesture_mapping'] = json.load(jsonfile)
-    with open('data/dynamic_gesture_mapping.json', 'r') as jsonfile:
-        C['dynamic_gesture_mapping'] = json.load(jsonfile)
-
-    static_path = 'models/gesture_net'
-    dynamic_path = 'models/shrec_net'
-    # Setting up networks
-
-    C['gesture_net'] = GestureNet(C['static_input_dim'], C['static_output_classes'])
-    C['gesture_net'].load_state_dict(torch.load(static_path))
-    C['gesture_net'].eval()
-
-    C['shrec_net'] = ShrecNet(C['dynamic_input_dim'], C['dynamic_output_classes'])
-    C['shrec_net'].load_state_dict(torch.load(dynamic_path))
-    C['shrec_net'].eval()
-
-    return C
+    return S
 
 def handle_zmq_stream():
     ''' Handles the incoming stream of data from mediapipe. '''
@@ -156,40 +128,16 @@ def handle_zmq_stream():
 
     landmark_list = landmarkList_pb2.LandmarkList()
 
+    S = initialize_state(C)
     # Main while loop
     while True:
         data = sock.recv()
 
         landmarks, handedness = get_landmarks(data, landmark_list)
-        mode = C['modes'][0] #current mode
 
-        if mode == 'mouse':
-            ##################
-            # Mouse Tracking #
-            ##################
+        S = handle_and_recognize(landmarks, handedness, C, S)
 
-            # get pointer location
-            mouse_pointer, C = calc_pointer(landmarks, C)
-            # control the mouse
-            C = mouse_track(mouse_pointer, C)
-
-        ####################
-        # Config Detection #
-        ####################
-
-        input_data = format_landmark(landmarks, handedness, C)
-        gesture, C = get_gesture(input_data, C)
-
-        #################
-        # Config Action #
-        #################
-
-        C = config_action(gesture, C)
-        if mode != C['modes'][0]:  #mode switch
-            #empty buffer
-            C['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
-
-        C['iter'] += 1
+        S['iter'] += 1
 
 
 if __name__ == "__main__":

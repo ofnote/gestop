@@ -5,16 +5,16 @@ import subprocess
 import pyautogui
 from pynput.keyboard import Key, KeyCode, Controller
 
-def config_action(config, C):
+def config_action(config, S):
     '''
     Given a configuration, decides what action to perform.
     '''
-    if C['modes'][0] == 'mouse':
-        return config_static_action(config, C)
+    if S['modes'][0] == 'mouse':
+        return config_static_action(config, S)
     else:
-        return config_dynamic_action(config, C)
+        return config_dynamic_action(config, S)
 
-def config_static_action(config, C):
+def config_static_action(config, S):
     '''
     Given a configuration, decides what action to perform.
     Modifies an array of flags based on what buttons are clicked
@@ -25,34 +25,34 @@ def config_static_action(config, C):
     spiderman -> scroll
     hitchhike -> mode switch
     '''
-    valid = valid_config(config, C['static_config_buffer']) #check if valid gesture
-    C['static_config_buffer'][C['iter']%5] = config  #adding the new config to the buffer
+    valid = valid_config(config, S['static_config_buffer']) #check if valid gesture
+    S['static_config_buffer'][S['iter']%5] = config  #adding the new config to the buffer
 
     if config == 'bad' or not valid:
         pyautogui.mouseUp()
-        C['flags']['mousedown'] = False
-        C['flags']['scroll'] = False
+        S['flags']['mousedown'] = False
+        S['flags']['scroll'] = False
     elif config == 'hitchhike':
         # Rotating list
-        C['modes'] = C['modes'][-1:] + C['modes'][:-1]
+        S['modes'] = S['modes'][-1:] + S['modes'][:-1]
     elif config == 'seven':
         pyautogui.mouseDown()
-        C['flags']['mousedown'] = True
-        C['flags']['scroll'] = False
+        S['flags']['mousedown'] = True
+        S['flags']['scroll'] = False
     elif config in ['four', 'eight', 'spiderman']:
         pyautogui.mouseUp()
-        C['flags']['mousedown'] = False
+        S['flags']['mousedown'] = False
         if config == 'four':
             pyautogui.rightClick()
         elif config == 'eight':
             pyautogui.doubleClick()
         else: #spiderman
-            C['flags']['scroll'] = True
+            S['flags']['scroll'] = True
 
-    return C
+    return S
 
 
-def config_dynamic_action(config, C):
+def config_dynamic_action(config, S):
     '''
     Given a configuration, decides what action to perform.
     Swipe Left/Right -> Switch workspaces (Requires xdotool)
@@ -62,8 +62,8 @@ def config_dynamic_action(config, C):
     Grab -> Mode switch
     Pinch/Expand -> Zoom in/out
     '''
-    valid = valid_config(config, C['dynamic_config_buffer']) #check if valid gesture
-    C['dynamic_config_buffer'][C['iter']%30] = config  #adding the new config to the buffer
+    valid = valid_config(config, S['dynamic_config_buffer']) #check if valid gesture
+    S['dynamic_config_buffer'][S['iter']%30] = config  #adding the new config to the buffer
     keyboard = Controller()
 
     if config in ['Shake', 'bad'] or not valid:
@@ -94,11 +94,11 @@ def config_dynamic_action(config, C):
         keyboard.release(Key.print_screen)
     elif config == 'Grab':
         # Rotating list to switch modes
-        C['modes'] = C['modes'][-1:] + C['modes'][:-1]
+        S['modes'] = S['modes'][-1:] + S['modes'][:-1]
     else:
         pass
 
-    return C
+    return S
 
 def valid_config(config, config_buffer):
     '''
