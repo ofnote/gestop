@@ -17,6 +17,12 @@
 #include <cstdlib>
 #include <string>
 
+#include <stdio.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
+#include <unistd.h> 
+#include <string.h> 
+
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
@@ -33,7 +39,7 @@
 
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
-#include <zmq.hpp>
+#include <zmq.hpp> 
 #include "gestures-mediapipe/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
@@ -51,6 +57,46 @@ DEFINE_string(input_video_path, "",
 DEFINE_string(output_video_path, "",
               "Full path of where to save result (.mp4 only). "
               "If not provided, show result in a window.");
+
+#define PORT 8089 
+#define USE_ZMQ 1
+#ifndef SERVER_IP
+#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "192.168.0.107"
+#endif
+
+
+int connect_to_server() {
+    int sock = 0, valread; 
+    struct sockaddr_in serv_addr;
+
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(PORT); 
+
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)  
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1; 
+    } 
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nServer Connection Failed \n"); 
+        return -1; 
+    } 
+    else {
+        printf("\n** Server Connected **\n");
+    }
+
+    return sock;
+}
 
 ::mediapipe::Status RunMPPGraph() {
   std::string calculator_graph_config_contents;
@@ -102,9 +148,14 @@ DEFINE_string(output_video_path, "",
             graph.AddOutputStreamPoller(kHandednessStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
-  zmq::context_t ctx;
-  zmq::socket_t sock(ctx, zmq::socket_type::push);
-  sock.bind("tcp://127.0.0.1:5556");
+  #if USE_ZMQ
+    zmq::context_t ctx;
+    zmq::socket_t sock(ctx, zmq::socket_type::push);
+    sock.bind("tcp://127.0.0.1:5556");
+  #else
+    int sock;
+    sock = connect_to_server();
+  #endif
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -170,7 +221,12 @@ DEFINE_string(output_video_path, "",
     }
     std::string output;
     landmarks.SerializeToString(&output);
-    sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
+    
+    #if USE_ZMQ
+      sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
+    #else
+      send(sock, output.c_str(), output.size(), 0);
+    #endif
 
     /*
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
