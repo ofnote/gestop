@@ -9,7 +9,7 @@ import zmq
 import pyautogui
 import torch
 import numpy as np
-from pynput.keyboard import Controller, KeyCode
+from pynput.keyboard import Controller, KeyCode, Key
 from model import GestureNet, ShrecNet
 from proto import landmarkList_pb2
 
@@ -285,14 +285,15 @@ def config_dynamic_action(config, flags, modes, config_buffer, iter_count):
     elif config in ['Pinch', 'Expand']:
         pass
     elif config == 'Tap':
-        pass
+       keyboard.press(Key.print_screen)
+       keyboard.release(Key.print_screen)
     elif config == 'Grab':
-        # empty keypoint buffer before switching modes
-        pass
+        # Rotating list to switch modes
+        modes = modes[-1:] + modes[:-1]
     else:
         pass
 
-    return flags, modes, config_buffer
+    return flags, modes, config_buffer, keypoint_buffer
 
 def valid_config(config, config_buffer):
     '''
@@ -384,11 +385,14 @@ def main():
         for lmark in landmarkList.landmark:
             landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
 
+
+        print(landmarkList.handedness)
         # Handedness - true if right hand, false if left
         handedness = landmarkList.handedness
+        mode = MODES[0]
 
         # The mouse tracking module is only called if the current mode is 'mouse'
-        if MODES[0] == 'mouse':
+        if mode == 'mouse':
             ##################
             # Mouse Tracking #
             ##################
@@ -416,6 +420,8 @@ def main():
         FLAGS, MODES, config_buffer = config_action(GESTURE, FLAGS, MODES,
                                                     config_buffer, ITER_COUNT)
 
+        if mode != MODES[0]:  #mode switch
+            keypoint_buffer = torch.zeros((DYNAMIC_BUFFER_LENGTH, DYNAMIC_INPUT_DIM))
 
         ITER_COUNT += 1
 
