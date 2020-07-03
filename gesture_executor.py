@@ -87,12 +87,10 @@ def config_dynamic_action(config, S):
         else:
             keyboard.press(KeyCode.from_vk(269025041))
             keyboard.release(KeyCode.from_vk(269025041))
-    elif config in ['Pinch', 'Expand']:
-        pass
-    elif config == 'Tap':
+    elif config == 'Grab':
         keyboard.press(Key.print_screen)
         keyboard.release(Key.print_screen)
-    elif config == 'Grab':
+    elif config == 'Tap':
         # Rotating list to switch modes
         S['modes'] = S['modes'][-1:] + S['modes'][:-1]
     else:

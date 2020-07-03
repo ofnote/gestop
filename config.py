@@ -65,6 +65,7 @@ def initialize_state(C):
     # 2. Gesture -> Intuitive gesture are performed to do complicated actions, such as switch
     #             worskpace, dim screen brightness etc.
     S['modes'] = ['mouse', 'gesture']
+    # S['modes'] = ['gesture', 'mouse']
 
     # maintain a buffer of most recently detected configs
     S['static_config_buffer'] = ['', '', '', '', '']

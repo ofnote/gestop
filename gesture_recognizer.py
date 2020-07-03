@@ -121,7 +121,7 @@ def get_dynamic_gesture(landmarks, C, S):
     # Also predict only once in 30 frames.
     if (S['keypoint_buffer'][0] == torch.zeros(len(S['keypoint_buffer'][0]))).all() \
        or S['iter'] % 30 != 0:
-        return 'bad', C
+        return 'bad', S
 
 
     out = C['shrec_net'](torch.unsqueeze(S['keypoint_buffer'], axis=0))

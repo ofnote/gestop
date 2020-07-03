@@ -50,8 +50,8 @@ A visualization of the various modules :
 | Swipe Down               | Decrease screen brightness         |
 | Rotate Clockwise         | Increase volume                    |
 | Rotate Counter Clockwise | Decrease volume                    |
-| Tap                      | Screenshot                         |
-| Grab                     | Mode Switch                        |
+| Grab                     | Screenshot                         |
+| Tap                      | Mode Switch                        |
 
 ### Requirements
 
