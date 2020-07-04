@@ -110,25 +110,31 @@ def get_dynamic_gesture(landmarks, C, S):
     Detects a dynamic gesture using ShrecNet. Takes in a sequence of
     `DYNAMIC_BUFFER_LENGTH` keypoints and classifies it.
     '''
-
-    # Left rotate buffer and replace last element,
-    # essentially removing oldest and placing latest in the last position
-    S['keypoint_buffer'] = torch.roll(S['keypoint_buffer'], -1, dims=0)
-    S['keypoint_buffer'][-1] = torch.tensor(landmarks)
-
-    # if the first index is a zero array, we have just switched modes.
-    # Will stop being true after buffer_len iterations.
-    # Also predict only once in 30 frames.
-    if (S['keypoint_buffer'][0] == torch.zeros(len(S['keypoint_buffer'][0]))).all() \
-       or S['iter'] % 30 != 0:
+    # Using the global variable CTRL_FLAG to detect if the ctrl key is set.
+    # Flag set by the Listener Thread (see gesture_receiver.py)
+    # Only proceed with detection if the ctrl key is pressed.
+    if not S['CTRL_FLAG']:
         return 'bad', S
 
+    # Store keypoint in buffer
+    if S['buffer_len'] < C['dynamic_buffer_length']:
+        S['keypoint_buffer'][S['buffer_len']] = torch.tensor(landmarks)
+        S['buffer_len'] += 1
+    else:
+        # Left rotate buffer and replace last element,
+        # essentially removing oldest and placing latest in the last position
+        S['keypoint_buffer'] = torch.roll(S['keypoint_buffer'], -1, dims=0)
+        S['keypoint_buffer'][-1] = torch.tensor(landmarks)
 
+    # For a detection to take place the buffer must be full
+    # To prevent multiple detections, we also detect only once in 30 frames.
+    if S['buffer_len'] != C['dynamic_buffer_length'] or S['iter'] % 30 != 0:
+        return 'bad', S
+
+    # Detection
     out = C['shrec_net'](torch.unsqueeze(S['keypoint_buffer'], axis=0))
     gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
 
-    # print(gesture_dict)
-    # print(max(gesture_dict, key=gesture_dict.get))
     gesture = max(gesture_dict, key=gesture_dict.get)
 
     return gesture, S

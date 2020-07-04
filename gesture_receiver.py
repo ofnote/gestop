@@ -3,8 +3,10 @@ Receives the data from mediapipe
 Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
+import threading
 import torch
 import zmq
+from pynput.keyboard import Listener, Key
 from proto import landmarkList_pb2
 
 from config import initialize_gesture_recognizer, initialize_state
@@ -12,6 +14,26 @@ from mouse_tracker import mouse_track, calc_pointer
 from gesture_recognizer import format_landmark, get_gesture
 from gesture_executor import config_action
 
+
+def on_press(key):
+    ''' Tracks keypresses. Sets the global CTRL_FLAG if the ctrl key is pressed.'''
+    global S
+    print('{0} pressed'.format(key))
+    if key == Key.ctrl:
+        S['CTRL_FLAG'] = True
+
+def on_release(key):
+    ''' Tracks keypresses. Unsets the global CTRL_FLAG if the ctrl key is released.'''
+    global S, C
+    print('{0} release'.format(key))
+    if key == Key.ctrl:
+        S['CTRL_FLAG'] = False
+        # Empty keypoint buffer
+        S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
+        S['buffer_len'] = 0
+    if key == Key.esc:
+        # Stop listener
+        return False
 
 def get_landmarks(data, landmark_list):
     ''' Parses the protobuf received from mediapipe and formats into a dict. '''
@@ -105,21 +127,28 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
     input_data = format_landmark(landmarks, handedness, C, mode)
     gesture, S = get_gesture(input_data, C, S)
+    print(gesture)
 
     #################
     # Config Action #
     #################
 
     S = config_action(gesture, S)
-    if mode != S['modes'][0]:  #mode switch
-        # empty the buffer
-        S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
 
     return S
 
 def handle_zmq_stream():
     ''' Handles the incoming stream of data from mediapipe. '''
+    # State and Configuration are global so that the listener thread can access them
+    global S, C
+
+    # Initializing the state and the configuration
     C = initialize_gesture_recognizer()
+    S = initialize_state(C)
+
+    # Start the listener on another thread to listen to keypress events
+    listener = Listener(on_press=on_press, on_release=on_release, suppress=False)
+    listener.start()
 
     # setup zmq context
     context = zmq.Context()
@@ -128,7 +157,6 @@ def handle_zmq_stream():
 
     landmark_list = landmarkList_pb2.LandmarkList()
 
-    S = initialize_state(C)
     # Main while loop
     while True:
         data = sock.recv()
@@ -139,7 +167,19 @@ def handle_zmq_stream():
 
         S['iter'] += 1
 
+        # The key listener thread has shut down, leaving only GestureThread and MainThread
+        if threading.active_count() == 1:
+            break
+
 
 if __name__ == "__main__":
     # run_socket_server()
+
+    # Program runs on two threads
+    # 1. Key Listener Thread -> Listens to what keys are being pressed
+    # Dynamic gestures are only recognized if the Ctrl key is pressed
+    # 2. MainThread -> The 'main' thread of execution
+    # Receives, recognizes and executes gestures
+
     handle_zmq_stream()
+    print("Shutdown successfully")

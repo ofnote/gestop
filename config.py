@@ -23,7 +23,7 @@ def initialize_gesture_recognizer():
     C['dynamic_input_dim'] = 74
     C['dynamic_output_classes'] = 14
 
-    C['dynamic_buffer_length'] = 60
+    C['dynamic_buffer_length'] = 30
 
     # Fetching gesture mapping
     with open('data/gesture_mapping.json', 'r') as jsonfile:
@@ -79,5 +79,10 @@ def initialize_state(C):
 
     # maintain a buffer of most recently detected keypoints for dynamic gestures
     S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
+    # Size of filled buffer i.e. number of elements in the buffer
+    S['buffer_len'] = 0
+
+    # Flag to denote whether the Ctrl key is pressed
+    S['CTRL_FLAG'] = False
 
     return S
