@@ -1,17 +1,16 @@
 '''
 Describes the implementation of the training procedure for gesture net
 '''
-import time
 import json
 import torch
 import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping
 from model import GestureNet, GestureDataset
-
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
@@ -34,7 +33,8 @@ def format_and_load(dataset, target, batchsize):
     formatted_data = torch.tensor(make_vector(dataset))
     formatted_target = torch.tensor(target)
 
-    loaded_data = DataLoader(GestureDataset(formatted_data, formatted_target), batch_size=batchsize)
+    loaded_data = DataLoader(GestureDataset(formatted_data, formatted_target),
+                             batch_size=batchsize, num_workers=10)
     return loaded_data
 
 def make_vector(dataset):
@@ -99,7 +99,6 @@ def main():
     EPOCHS = 10
     SEED_VAL = 42
     init_seed(SEED_VAL)
-    writer = SummaryWriter('logs')
 
     ##################
     # INPUT PIPELINE #
@@ -132,92 +131,23 @@ def main():
     train_loader = format_and_load(train_X, train_Y, BATCH_SIZE)
     test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
 
-
-    ############
-    # TRAINING #
-    ############
-
     OUTPUT_CLASSES = 6
     INPUT_DIM = 49 #refer make_vector() to verify input dimensions
 
     gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
-    optimizer = torch.optim.Adam(gesture_net.parameters(), lr=5e-3)
-    criterion = torch.nn.CrossEntropyLoss()
-    gesture_net.cuda()
 
-    training_loss_values = []
-    validation_loss_values = []
-    validation_accuracy_values = []
+    early_stopping = EarlyStopping(
+        patience=3,
+        verbose=True,
+    )
 
-    for epoch in range(EPOCHS):
-
-        gesture_net.train()
-
-        print('======== Epoch {:} / {:} ========'.format(epoch + 1, EPOCHS))
-        start_time = time.time()
-        TOTAL_LOSS = 0
-
-        for batch_no, batch in enumerate(train_loader):
-            input_data = batch[0].to(device)
-            target = batch[1].to(device)
-
-            gesture_net.zero_grad()
-            output = gesture_net(input_data.float())
-
-            loss = criterion(output, target.long())
-            TOTAL_LOSS += loss.item()
-
-            loss.backward()
-            optimizer.step()
-
-        #Logging the loss and accuracy in Tensorboard
-        avg_train_loss = TOTAL_LOSS / len(train_loader)
-        training_loss_values.append(avg_train_loss)
-
-        for name, weights in gesture_net.named_parameters():
-            writer.add_histogram(name, weights, epoch)
-
-        writer.add_scalar('Train/Loss', avg_train_loss, epoch)
-
-        print("Average training loss: {0:.2f}".format(avg_train_loss))
-
-        # Validation
-
-        gesture_net.eval()
-
-        test_loss, test_accuracy = 0, 0
-        NB_EVAL_STEPS = 0
-
-        for batch_no, batch in enumerate(test_loader):
-
-            input_data = batch[0].to(device)
-            target = batch[1].to(device)
-
-            with torch.no_grad():
-                output = gesture_net(input_data.float())
-                loss = criterion(output, target.long())
-
-            target = target.to('cpu').numpy()
-            output = output.to('cpu').numpy()
-
-            tmp_eval_accuracy = calc_accuracy(target, output)
-            test_accuracy += tmp_eval_accuracy
-            test_loss += loss.item()
-
-            NB_EVAL_STEPS += 1
-
-        avg_valid_acc = test_accuracy/NB_EVAL_STEPS
-        avg_valid_loss = test_loss/NB_EVAL_STEPS
-        validation_loss_values.append(avg_valid_loss)
-        validation_accuracy_values.append(avg_valid_acc)
-
-        writer.add_scalar('Valid/Loss', avg_valid_loss, epoch)
-        writer.add_scalar('Valid/Accuracy', avg_valid_acc, epoch)
-        writer.flush()
-
-        print("Avg Val Accuracy: {0:.2f}".format(avg_valid_acc))
-        print("Average Val Loss: {0:.2f}".format(avg_valid_loss))
-        print("Time taken by epoch: {0:.2f}".format(time.time() - start_time))
+    trainer = Trainer(gpus=1,
+                      deterministic=True,
+                      default_root_dir='logs',
+                      early_stop_callback=early_stopping)
+    trainer.fit(gesture_net, train_loader, test_loader)
+    # model.load_state_dict(torch.load(PATH))
+    # trainer.test(model, test_dataloaders=val_loader)
 
     ################
     # SAVING MODEL #

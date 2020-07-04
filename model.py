@@ -16,7 +16,7 @@ from pytorch_lightning.core.lightning import LightningModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-class GestureNet(nn.Module):
+class GestureNet(LightningModule):
     '''
     The description of the model which recognizes the gestures given the hand keypoints.
     '''
@@ -31,6 +31,43 @@ class GestureNet(nn.Module):
         x = self.fc2(x)
         return x
 
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+
+        output = self(x.float())
+
+        loss = F.cross_entropy(output, y.long())
+        tensorboard_logs = {'train_loss': loss}
+        return {'loss': loss, 'log': tensorboard_logs}
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.001)
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+
+        output = self(x.float())
+
+        return {'val_loss': F.cross_entropy(output, y.long()),
+                'val_acc': np.argmax(output[0].cpu().numpy()) == y}
+
+    def validation_epoch_end(self, outputs):
+        # Last batch will not have 64
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        avg_acc = torch.stack([x['val_acc'] for x in outputs[:-1]]).float().mean()
+        tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
+        return {'val_loss': avg_loss, 'log': tensorboard_logs}
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+
+        output = self(x)
+
+        return {'test_acc': np.argmax(output[0].cpu().numpy()) == y}
+   
+    def test_epoch_end(self, outputs):
+        test_acc = torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()).mean()
+        return {'test_acc':test_acc}
 
 class GestureDataset(Dataset):
     ''' Implementation of a GestureDataset which is then loaded into torch's DataLoader'''

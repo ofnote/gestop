@@ -142,12 +142,12 @@ def main():
                       deterministic=True,
                       default_root_dir='logs',
                       early_stop_callback=early_stopping)
-    # trainer.fit(model, train_loader, val_loader)
+    trainer.fit(model, train_loader, val_loader)
 
     PATH = 'models/shrec_net'
-    # torch.save(model.state_dict(), PATH)
-    model.load_state_dict(torch.load(PATH))
-    trainer.test(model, test_dataloaders=val_loader)
+    torch.save(model.state_dict(), PATH)
+    # model.load_state_dict(torch.load(PATH))
+    # trainer.test(model, test_dataloaders=val_loader)
 
 
 if __name__ == '__main__':
