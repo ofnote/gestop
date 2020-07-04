@@ -12,6 +12,7 @@ The data for *static gestures* was collected mnaually with the help of a custom 
 The project consists of a few distinct pieces which are:
 
 * The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
+* Gesture Receive - See `gesture_receiver.py`, responsible for handling the ZMQ stream and utilizing all the following modules.
 * Mouse tracking - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
 * Config detection - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand.
 * Config action - See `gesture_executor.py`, uses the configuration from the previous module, and executes an action depending on various factors, i.e. current and previous states of the hand, whether such an action is permissible in the given context etc.
@@ -29,6 +30,8 @@ A visualization of the various modules :
 * In **mouse** mode, the mouse is tracked simply by moving the index finger. 
 * Dynamic gestures are only supported with right hand, as all data from SHREC is right hand only.
 * A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
+* While in **gestures** mode, hold down the Ctrl key before performing a gesture.
+* For dynamic gestures to work properly, you may need to change the keycodes being used in `gesture_executor.py`. Use the given `find_keycode.py` to find the keycodes of the keys used to change screen brightness and volumee. Finally, system shortcuts may need to be remapped so that the shortcuts work even with the Ctrl key held down. For example, in addition to the usual default behaviour of `<Prnt_Screen>` taking a screenshot, you may need to add `<Ctrl+Prnt_Screen>` as a shortcut as well. 
 
 #### Static Gestures
 
@@ -71,7 +74,7 @@ pyautogui is a GUI automation python module used, in this case, to simulate the 
 
 * pynput
 
-pyautogui's keyboard functions were not enough for the requirements of the dynamic gestures, thus the python library pynput is also used.
+pyautogui's keyboard functions were not enough for the requirements of the dynamic gestures, thus the python library pynput is also used. In addition, dynamic gestures are only detected while the Ctrl-Key is held down. 
 
 * Pytorch and pytorch-lightning
 
