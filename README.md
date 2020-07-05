@@ -45,16 +45,17 @@ A visualization of the various modules :
 
 #### Dynamic Gestures
 
-| Gesture name             | Gesture Action                     |
-| --------------           | ----------------                   |
-| Swipe Right              | Move to the workspace on the right |
-| Swipe Left               | Move to the workspace on the left  |
-| Swipe Up                 | Increase screen brightness         |
-| Swipe Down               | Decrease screen brightness         |
-| Rotate Clockwise         | Increase volume                    |
-| Rotate Counter Clockwise | Decrease volume                    |
-| Grab                     | Screenshot                         |
-| Tap                      | Mode Switch                        |
+| Gesture name             | Gesture Action                     | Gif                                              |
+| --------------           | ----------------                   | ---------                                        |
+|                          |                                    |                                                  |
+| Swipe Right              | Move to the workspace on the right | ![swiperight](images/swiperight.gif)             |
+| Swipe Left               | Move to the workspace on the left  | ![swipeleft](images/swipeleft.gif)               |
+| Swipe Up                 | Increase screen brightness         | ![swipeup](images/swipeup.gif)                   |
+| Swipe Down               | Decrease screen brightness         | ![swipedown](images/swipedown.gif)               |
+| Rotate Clockwise         | Increase volume                    | ![clockwise](images/clockwise.gif)               |
+| Rotate Counter Clockwise | Decrease volume                    | ![counterclockwise](images/counterclockwise.gif) |
+| Grab                     | Screenshot                         | Not fully functional                             |
+| Tap                      | Mode Switch                        | ![tap](images/tap.gif)                           |
 
 ### Requirements
 
