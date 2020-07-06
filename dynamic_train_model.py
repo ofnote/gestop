@@ -5,6 +5,7 @@ Trains the network and saves it to disk.
 '''
 
 import os
+from functools import partial
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -12,7 +13,9 @@ from sklearn.model_selection import train_test_split
 from torchvision import transforms
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
+
 from model import ShrecNet, ShrecDataset#, variable_length_collate
+from config import initialize_configuration
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
@@ -43,39 +46,42 @@ def normalize(seq):
         i += 1
     return norm
 
-def format_mediapipe(seq):
+def format_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
-    Gets rid of keypoint 1 (Palm) which is not provided by mediapipe.
+    Only absolute coordinates being used are those of the wrist,
     Calculates the relative hand vectors and appends them to the absolute coordinates.
     '''
-    new_seq = torch.zeros((len(seq), 74))  # 42 absolute + 32 relative
+    new_seq = torch.zeros((len(seq), C['dynamic_input_dim']))  # 2 absolute + 32 relative
     for i, iseq in enumerate(seq):
         # Absolute
-        new_seq[i] = torch.cat([iseq[0:2], iseq[4:], torch.zeros(32)])
+        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(32)])
+
+        # Making a new sequence without the Palm keypoint for ease of calculation
+        mediapipe_seq = torch.cat([iseq[0:2], iseq[4:]])
 
         # Relative
         for j in range(4):
             # calculate L01, L12, L23, L34
-            new_seq[i][42+2*j] = new_seq[i][2*j+2] - new_seq[i][2*j] #L__X
-            new_seq[i][42+2*j+1] = new_seq[i][2*j+3] - new_seq[i][2*j+1] #L__Y
+            new_seq[i][2+2*j] = mediapipe_seq[2*j+2] - mediapipe_seq[2*j] #L__X
+            new_seq[i][2+2*j+1] = mediapipe_seq[2*j+3] - mediapipe_seq[2*j+1] #L__Y
 
         for j in range(3):
             # calculate L56, L67, L78
-            new_seq[i][50+2*j] = new_seq[i][2*j+12] - new_seq[i][2*j+10]
-            new_seq[i][50+2*j+1] = new_seq[i][2*j+13] - new_seq[i][2*j+11]
+            new_seq[i][10+2*j] = mediapipe_seq[2*j+12] - mediapipe_seq[2*j+10]
+            new_seq[i][10+2*j+1] = mediapipe_seq[2*j+13] - mediapipe_seq[2*j+11]
 
             # calculate L910, L1011, L1112
-            new_seq[i][56+2*j] = new_seq[i][2*j+20] - new_seq[i][2*j+18]
-            new_seq[i][56+2*j+1] = new_seq[i][2*j+21] - new_seq[i][2*j+19]
+            new_seq[i][16+2*j] = mediapipe_seq[2*j+20] - mediapipe_seq[2*j+18]
+            new_seq[i][16+2*j+1] = mediapipe_seq[2*j+21] - mediapipe_seq[2*j+19]
 
             # calculate L1314, L1415, L1516
-            new_seq[i][62+2*j] = new_seq[i][2*j+28] - new_seq[i][2*j+26]
-            new_seq[i][62+2*j+1] = new_seq[i][2*j+29] - new_seq[i][2*j+27]
+            new_seq[i][22+2*j] = mediapipe_seq[2*j+28] - mediapipe_seq[2*j+26]
+            new_seq[i][22+2*j+1] = mediapipe_seq[2*j+29] - mediapipe_seq[2*j+27]
 
             # calculate L1718, L1819, L1920
-            new_seq[i][68+2*j] = new_seq[i][2*j+36] - new_seq[i][2*j+34]
-            new_seq[i][68+2*j+1] = new_seq[i][2*j+37] - new_seq[i][2*j+35]
+            new_seq[i][28+2*j] = mediapipe_seq[2*j+36] - mediapipe_seq[2*j+34]
+            new_seq[i][28+2*j+1] = mediapipe_seq[2*j+37] - mediapipe_seq[2*j+35]
 
     return new_seq
 
@@ -104,19 +110,23 @@ def read_data(seed_val):
 def main():
     ''' Main '''
 
-    SEED_VAL = 42
-    init_seed(SEED_VAL)
+    C = initialize_configuration()
+    init_seed(C['seed_val'])
 
     ##################
     # INPUT PIPELINE #
     ##################
 
-    train_x, test_x, train_y, test_y = read_data(SEED_VAL)
+    train_x, test_x, train_y, test_y = read_data(C['seed_val'])
+
+    # Higher order function to pass configuration to format_mediapipe
+    format_vector = partial(format_mediapipe, C)
+
     # Custom transforms to prepare data.
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(normalize),
-        transforms.Lambda(format_mediapipe),
+        transforms.Lambda(format_vector),
     ])
 
     #FIXME -> fix variable_length_collate such that batches can be used.
@@ -129,8 +139,8 @@ def main():
     # TRAINING #
     ############
 
-    input_dim = 74
-    output_classes = 14
+    input_dim = C['dynamic_input_dim']
+    output_classes = C['dynamic_output_classes']
 
     model = ShrecNet(input_dim, output_classes)
     early_stopping = EarlyStopping(
@@ -142,12 +152,13 @@ def main():
                       deterministic=True,
                       default_root_dir='logs',
                       early_stop_callback=early_stopping)
-    trainer.fit(model, train_loader, val_loader)
+    # trainer.fit(model, train_loader, val_loader)
 
     PATH = 'models/shrec_net'
-    torch.save(model.state_dict(), PATH)
-    # model.load_state_dict(torch.load(PATH))
-    # trainer.test(model, test_dataloaders=val_loader)
+    # torch.save(model.state_dict(), PATH)
+
+    model.load_state_dict(torch.load(PATH))
+    trainer.test(model, test_dataloaders=val_loader)
 
 
 if __name__ == '__main__':
