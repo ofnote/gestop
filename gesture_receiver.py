@@ -4,27 +4,27 @@ Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
 import threading
+from functools import partial
+
 import torch
 import zmq
 from pynput.keyboard import Listener, Key
-from proto import landmarkList_pb2
 
-from config import initialize_gesture_recognizer, initialize_state
+from proto import landmarkList_pb2
+from config import initialize_configuration, initialize_state
 from mouse_tracker import mouse_track, calc_pointer
 from gesture_recognizer import format_landmark, get_gesture
 from gesture_executor import config_action
 
 
-def on_press(key):
+def on_press(S, key):
     ''' Tracks keypresses. Sets the global CTRL_FLAG if the ctrl key is pressed.'''
-    global S
     print('{0} pressed'.format(key))
     if key == Key.ctrl:
         S['CTRL_FLAG'] = True
 
-def on_release(key):
+def on_release(S, C, key):
     ''' Tracks keypresses. Unsets the global CTRL_FLAG if the ctrl key is released.'''
-    global S, C
     print('{0} release'.format(key))
     if key == Key.ctrl:
         S['CTRL_FLAG'] = False
@@ -127,7 +127,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
     input_data = format_landmark(landmarks, handedness, C, mode)
     gesture, S = get_gesture(input_data, C, S)
-    print(gesture)
+    # print(gesture)
 
     #################
     # Config Action #
@@ -139,15 +139,19 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
 def handle_zmq_stream():
     ''' Handles the incoming stream of data from mediapipe. '''
-    # State and Configuration are global so that the listener thread can access them
-    global S, C
 
     # Initializing the state and the configuration
-    C = initialize_gesture_recognizer()
+    C = initialize_configuration()
     S = initialize_state(C)
 
+    # Wrapping on_press and on_release into higher order functions
+    # to avoid use of global variables
+    on_press_key = partial(on_press, S)
+    on_release_key = partial(on_release, S, C)
+
     # Start the listener on another thread to listen to keypress events
-    listener = Listener(on_press=on_press, on_release=on_release, suppress=False)
+    listener = Listener(on_press=on_press_key,
+                        on_release=on_release_key)
     listener.start()
 
     # setup zmq context
