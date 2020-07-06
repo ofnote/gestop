@@ -7,8 +7,8 @@ import pyautogui
 import torch
 from model import GestureNet, ShrecNet
 
-def initialize_gesture_recognizer():
-    ''' Initialize the gesture recognizer for further use. '''
+def initialize_configuration():
+    ''' Initialize the configuration of the gesture recognizer. '''
 
     # Dictionary holding all useful variables, parameters.
     C = {}
@@ -17,13 +17,16 @@ def initialize_gesture_recognizer():
     pyautogui.FAILSAFE = False
     pyautogui.PAUSE = 0.01
 
+    # Seed value for reproducibility
+    C['seed_val'] = 42
+
     C['static_input_dim'] = 49 #refer make_vector() in model.py to verify input dimensions
     C['static_output_classes'] = 6
 
-    C['dynamic_input_dim'] = 74
+    C['dynamic_input_dim'] = 34
     C['dynamic_output_classes'] = 14
 
-    C['dynamic_buffer_length'] = 30
+    C['dynamic_buffer_length'] = 60
 
     # Fetching gesture mapping
     with open('data/gesture_mapping.json', 'r') as jsonfile:

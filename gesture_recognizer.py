@@ -52,32 +52,31 @@ def format_dynamic_landmark(landmark, input_dim):
     '''
     formatted_landmark = np.zeros((input_dim))
     # Absolute
-    for i in range(21):
-        formatted_landmark[2*i] = landmark[i]['x']
-        formatted_landmark[2*i+1] = landmark[i]['y']
+    formatted_landmark[0] = landmark[0]['x']
+    formatted_landmark[1] = landmark[0]['y']
 
     # Relative
     for i in range(4):
         # calculate L01, L12, L23, L34
-        formatted_landmark[42+2*i] = formatted_landmark[2*i+2] - formatted_landmark[2*i] #L__X
-        formatted_landmark[42+2*i+1] = formatted_landmark[2*i+3] - formatted_landmark[2*i+1] #L__Y
+        formatted_landmark[2+2*i] = landmark[i+1]['x'] - landmark[i]['x'] #L__X
+        formatted_landmark[2+2*i+1] = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
 
     for i in range(3):
         # calculate L56, L67, L78
-        formatted_landmark[50+2*i] = formatted_landmark[2*i+12] - formatted_landmark[2*i+10]
-        formatted_landmark[50+2*i+1] = formatted_landmark[2*i+13] - formatted_landmark[2*i+11]
+        formatted_landmark[10+2*i] = landmark[i+6]['x'] - landmark[i+5]['x']
+        formatted_landmark[10+2*i+1] = landmark[i+6]['y'] - landmark[i+5]['y']
 
         # calculate L910, L1011, L1112
-        formatted_landmark[56+2*i] = formatted_landmark[2*i+20] - formatted_landmark[2*i+18]
-        formatted_landmark[56+2*i+1] = formatted_landmark[2*i+21] - formatted_landmark[2*i+19]
+        formatted_landmark[16+2*i] = landmark[i+10]['x'] - landmark[i+9]['x']
+        formatted_landmark[16+2*i+1] = landmark[i+10]['y'] - landmark[i+9]['y']
 
         # calculate L1314, L1415, L1516
-        formatted_landmark[62+2*i] = formatted_landmark[2*i+28] - formatted_landmark[2*i+26]
-        formatted_landmark[62+2*i+1] = formatted_landmark[2*i+29] - formatted_landmark[2*i+27]
+        formatted_landmark[22+2*i] = landmark[i+14]['x'] - landmark[i+13]['x']
+        formatted_landmark[22+2*i+1] = landmark[i+14]['y'] - landmark[i+13]['y']
 
         # calculate L1718, L1819, L1920
-        formatted_landmark[68+2*i] = formatted_landmark[2*i+36] - formatted_landmark[2*i+34]
-        formatted_landmark[68+2*i+1] = formatted_landmark[2*i+37] - formatted_landmark[2*i+35]
+        formatted_landmark[28+2*i] = landmark[i+18]['x'] - landmark[i+17]['x']
+        formatted_landmark[28+2*i+1] = landmark[i+18]['y'] - landmark[i+17]['y']
 
     return formatted_landmark
 
@@ -136,5 +135,6 @@ def get_dynamic_gesture(landmarks, C, S):
     gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)
-
+    print(gesture_dict)
+    print(gesture)
     return gesture, S
