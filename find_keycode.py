@@ -1,5 +1,5 @@
 '''
-Helper script from pynput to figure out keycode of volume/brihtness keys
+Helper script from pynput to figure out keycode of volume/brightness keys
 '''
 from pynput.keyboard import Key, Listener
 

@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 class GestureNet(LightningModule):
     '''
-    The description of the model which recognizes the gestures given the hand keypoints.
+    The implementation of the model which recognizes static gestures given the hand keypoints.
     '''
     def __init__(self, input_dim, output_classes):
         super(GestureNet, self).__init__()
@@ -52,7 +52,7 @@ class GestureNet(LightningModule):
                 'val_acc': np.argmax(output[0].cpu().numpy()) == y}
 
     def validation_epoch_end(self, outputs):
-        # Last batch will not have 64
+        # FIXME - Last batch will not have 64
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['val_acc'] for x in outputs[:-1]]).float().mean()
         tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
@@ -64,7 +64,7 @@ class GestureNet(LightningModule):
         output = self(x)
 
         return {'test_acc': np.argmax(output[0].cpu().numpy()) == y}
-   
+
     def test_epoch_end(self, outputs):
         test_acc = torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()).mean()
         return {'test_acc':test_acc}
@@ -83,7 +83,7 @@ class GestureDataset(Dataset):
 
 class ShrecNet(LightningModule):
     '''
-    The description of the model which recognizes dynamic hand gestures
+    The implementation of the model which recognizes dynamic hand gestures
     given a sequence of keypoints. Consists of a bidirectional GRU connected
     to a fully conncted layer.
     '''
@@ -158,7 +158,7 @@ class ShrecNet(LightningModule):
         test_pred = np.array([x['test_pred'] for x in outputs])
         test_actual = torch.squeeze(torch.stack([x['test_actual'] for x in outputs])).cpu().numpy()
 
-        labels=['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
+        labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
                 'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
                 'Swipe V', 'Shake']
         conf_mat = confusion_matrix(test_actual, test_pred)

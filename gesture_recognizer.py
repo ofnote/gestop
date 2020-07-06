@@ -1,13 +1,13 @@
 '''
-Functions which implement code to track the mouse,
-given a set of landmarks.
+Functionality to recognize a static/dynamic gesture,
+given a set of keypoints.
 '''
 
 import numpy as np
 import torch
 
 def format_landmark(landmark, hand, C, mode):
-    ''' A wrapper over formt_static_landmark and format_dynamic_landmark. '''
+    ''' A wrapper over format_static_landmark and format_dynamic_landmark. '''
     if mode == 'mouse':
         return format_static_landmark(landmark, hand, C['static_input_dim'])
     else:
@@ -91,14 +91,14 @@ def get_gesture(landmarks, C, S):
 
 def get_static_gesture(landmarks, C):
     '''
-    Uses the neural net to classify the keypoints into a gesture.
+    Uses GestureNet to classify the keypoints into a gesture.
     Also decides if a 'bad gesture' was performed.
     '''
     landmarks = torch.tensor(landmarks, dtype=torch.float32)
     out = C['gesture_net'](landmarks)
     #print(dict(zip(mapping.values(), softmax(out.detach().numpy()))))
     gesture_dict = dict(zip(C['static_gesture_mapping'].values(), out.detach().numpy()))
-    # doubling the likelihood of the bad gesture to prevent misclassification
+    # doubling the likelihood of the bad gesture to lower chances of misclassification
     gesture_dict['bad'] *= 2
     gesture = max(gesture_dict, key=gesture_dict.get)
     return gesture
@@ -109,7 +109,7 @@ def get_dynamic_gesture(landmarks, C, S):
     Detects a dynamic gesture using ShrecNet. Takes in a sequence of
     `DYNAMIC_BUFFER_LENGTH` keypoints and classifies it.
     '''
-    # Using the global variable CTRL_FLAG to detect if the ctrl key is set.
+    # Using the variable CTRL_FLAG to detect if the ctrl key is set.
     # Flag set by the Listener Thread (see gesture_receiver.py)
     # Only proceed with detection if the ctrl key is pressed.
     if not S['CTRL_FLAG']:

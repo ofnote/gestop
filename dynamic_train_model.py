@@ -129,7 +129,7 @@ def main():
         transforms.Lambda(format_vector),
     ])
 
-    #FIXME -> fix variable_length_collate such that batches can be used.
+    #FIXME -> fix variable_length_collate so that batches can be used.
     train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
                               num_workers=10)#, batch_size=16, collate_fn=variable_length_collate)
     val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),

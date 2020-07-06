@@ -62,11 +62,12 @@ def config_dynamic_action(config, S):
     Grab -> Mode switch
     Pinch/Expand -> Zoom in/out
     '''
-    valid = valid_config(config, S['dynamic_config_buffer']) #check if valid gesture
     S['dynamic_config_buffer'][S['iter']%30] = config  #adding the new config to the buffer
+
+    # Using pynput's Controller for virtual keyboard input
     keyboard = Controller()
 
-    if config in ['Shake', 'bad'] or not valid:
+    if config in ['Shake', 'bad']:
         pass
     elif config in ['Swipe Left', 'Swipe Right']:
         if config == 'Swipe Left':
@@ -104,7 +105,7 @@ def valid_config(config, config_buffer):
     For most gestures, if it is present, then that makes it an invalid gesture.
     This is to prevent multiple gesture detections in a short span of time.
     '''
-    if config in ['bad', 'seven', 'spiderman', 'Shake']: # these gestures are always valid, even if repeated
+    if config in ['bad', 'seven', 'spiderman']: # these gestures are always valid, even if repeated
         return True
     if config in config_buffer: # repeated gesture
         return False

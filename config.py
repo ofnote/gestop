@@ -1,6 +1,6 @@
 '''
 Functions which initialize the 'configuration' -> values which don't change during runtime
-and the 'state' -> valuse which represent the state of the application
+and the 'state' -> values which represent the state of the application
 '''
 import json
 import pyautogui
@@ -20,15 +20,17 @@ def initialize_configuration():
     # Seed value for reproducibility
     C['seed_val'] = 42
 
-    C['static_input_dim'] = 49 #refer make_vector() in model.py to verify input dimensions
+    # Refer make_vector() in train_model.py to verify input dimensions
+    C['static_input_dim'] = 49
     C['static_output_classes'] = 6
 
+    # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
     C['dynamic_input_dim'] = 34
     C['dynamic_output_classes'] = 14
 
     C['dynamic_buffer_length'] = 60
 
-    # Fetching gesture mapping
+    # Fetching gesture mappings
     with open('data/gesture_mapping.json', 'r') as jsonfile:
         C['static_gesture_mapping'] = json.load(jsonfile)
     with open('data/dynamic_gesture_mapping.json', 'r') as jsonfile:
@@ -36,6 +38,7 @@ def initialize_configuration():
 
     static_path = 'models/gesture_net'
     dynamic_path = 'models/shrec_net'
+
     # Setting up networks
 
     C['gesture_net'] = GestureNet(C['static_input_dim'], C['static_output_classes'])
