@@ -111,30 +111,44 @@ def get_dynamic_gesture(landmarks, C, S):
     '''
     # Using the variable CTRL_FLAG to detect if the ctrl key is set.
     # Flag set by the Listener Thread (see gesture_receiver.py)
-    # Only proceed with detection if the ctrl key is pressed.
-    if not S['CTRL_FLAG']:
+    # Detection only occurs when the Ctrl key is released.
+
+    # |-------------------------------------------------------------------|
+    # |CTRL_FLAG | PREV_FLAG | Comments                                   |
+    # |----------+-----------+--------------------------------------------|
+    # | False    | False     | Ctrl key has not been pressed.             |
+    # | True     | False     | Just been pressed. Start storing keypoints.|
+    # | True     | True      | Continuing capturing keypoints.            |
+    # | False    | True      | Key has been released. Time to detect.     |
+    # |----------+-----------+--------------------------------------------|
+
+    if not S['CTRL_FLAG'] and not S['PREV_FLAG']:
         return 'bad', S
 
-    # Store keypoint in buffer
-    if S['buffer_len'] < C['dynamic_buffer_length']:
-        S['keypoint_buffer'][S['buffer_len']] = torch.tensor(landmarks)
-        S['buffer_len'] += 1
+    # Store keypoints in buffer
+    S['keypoint_buffer'].append(torch.tensor(landmarks))
+
+    # Refer table above
+    if not S['CTRL_FLAG'] and S['PREV_FLAG']:
+        return dynamic_gesture_detection(C, S)
     else:
-        # Left rotate buffer and replace last element,
-        # essentially removing oldest and placing latest in the last position
-        S['keypoint_buffer'] = torch.roll(S['keypoint_buffer'], -1, dims=0)
-        S['keypoint_buffer'][-1] = torch.tensor(landmarks)
-
-    # For a detection to take place the buffer must be full
-    # To prevent multiple detections, we also detect only once in 30 frames.
-    if S['buffer_len'] != C['dynamic_buffer_length'] or S['iter'] % 30 != 0:
+        S['PREV_FLAG'] = S['CTRL_FLAG']
         return 'bad', S
 
-    # Detection
-    out = C['shrec_net'](torch.unsqueeze(S['keypoint_buffer'], axis=0))
+
+def dynamic_gesture_detection(C, S):
+    ''' Detection of Dynamic Gesture using ShrecNet. '''
+
+    # Formatting network input
+    x = torch.unsqueeze(torch.stack(S['keypoint_buffer']), 0)
+    out = C['shrec_net'](x.float())
     gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)
-    print(gesture_dict)
-    print(gesture)
+    # print(gesture_dict)
+    # print(gesture)
+
+    S['PREV_FLAG'] = S['CTRL_FLAG']
+    S['keypoint_buffer'] = []
+
     return gesture, S

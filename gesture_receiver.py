@@ -19,18 +19,15 @@ from gesture_executor import config_action
 
 def on_press(S, key):
     ''' Tracks keypresses. Sets the global CTRL_FLAG if the ctrl key is pressed.'''
-    print('{0} pressed'.format(key))
+    # print('{0} pressed'.format(key))
     if key == Key.ctrl:
         S['CTRL_FLAG'] = True
 
 def on_release(S, C, key):
     ''' Tracks keypresses. Unsets the global CTRL_FLAG if the ctrl key is released.'''
-    print('{0} release'.format(key))
+    # print('{0} release'.format(key))
     if key == Key.ctrl:
         S['CTRL_FLAG'] = False
-        # Empty keypoint buffer
-        S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
-        S['buffer_len'] = 0
     if key == Key.esc:
         # Stop listener
         return False

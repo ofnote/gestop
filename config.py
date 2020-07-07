@@ -28,8 +28,6 @@ def initialize_configuration():
     C['dynamic_input_dim'] = 34
     C['dynamic_output_classes'] = 14
 
-    C['dynamic_buffer_length'] = 60
-
     # Fetching gesture mappings
     with open('data/gesture_mapping.json', 'r') as jsonfile:
         C['static_gesture_mapping'] = json.load(jsonfile)
@@ -83,12 +81,12 @@ def initialize_state(C):
     # array of flags for mouse control
     S['flags'] = {'mousedown': False, 'scroll': False}
 
-    # maintain a buffer of most recently detected keypoints for dynamic gestures
-    S['keypoint_buffer'] = torch.zeros((C['dynamic_buffer_length'], C['dynamic_input_dim']))
-    # Size of filled buffer i.e. number of elements in the buffer
-    S['buffer_len'] = 0
+    # maintain a buffer of keypoints for dynamic gestures
+    S['keypoint_buffer'] = []
 
     # Flag to denote whether the Ctrl key is pressed
     S['CTRL_FLAG'] = False
+    # CTRL_FLAG of the previous timestep. Used to detect change
+    S['PREV_FLAG'] = False
 
     return S
