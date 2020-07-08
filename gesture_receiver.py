@@ -101,10 +101,10 @@ def get_landmarks(data, landmark_list):
 
 def handle_and_recognize(landmarks, handedness, C, S):
     '''
-    Given the keypoints from mediapipe
-    The mouse is tracked if the current mode is 'mouse'
-    A gesture is recognized, either static or dynamic
-    And the action corresponding to that gesture is executed.
+    Given the keypoints from mediapipe:
+    1. The mouse is tracked if the current mode is 'mouse'
+    2. A gesture is recognized, either static or dynamic
+    3. The action corresponding to that gesture is executed.
     '''
     mode = S['modes'][0] #current mode
 
