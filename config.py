@@ -37,14 +37,22 @@ def initialize_configuration():
     static_path = 'models/gesture_net'
     dynamic_path = 'models/shrec_net'
 
+    if not torch.cuda.is_available():
+        map_location = torch.device('cpu')
+    else:
+        map_location = None
+
     # Setting up networks
 
+    print('Loading GestureNet...')
     C['gesture_net'] = GestureNet(C['static_input_dim'], C['static_output_classes'])
-    C['gesture_net'].load_state_dict(torch.load(static_path))
+    C['gesture_net'].load_state_dict(torch.load(static_path, map_location=map_location))
     C['gesture_net'].eval()
 
+    print('Loading ShrecNet..')
+
     C['shrec_net'] = ShrecNet(C['dynamic_input_dim'], C['dynamic_output_classes'])
-    C['shrec_net'].load_state_dict(torch.load(dynamic_path))
+    C['shrec_net'].load_state_dict(torch.load(dynamic_path, map_location=map_location))
     C['shrec_net'].eval()
 
     return C

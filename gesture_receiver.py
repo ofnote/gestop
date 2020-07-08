@@ -32,6 +32,18 @@ def on_release(S, C, key):
         # Stop listener
         return False
 
+def start_key_listener(S, C):
+    # Wrapping on_press and on_release into higher order functions
+    # to avoid use of global variables
+    on_press_key = partial(on_press, S)
+    on_release_key = partial(on_release, S, C)
+
+    # Start the listener on another thread to listen to keypress events
+    listener = Listener(on_press=on_press_key,
+                        on_release=on_release_key)
+    listener.start()
+
+
 def get_landmarks(data, landmark_list):
     ''' Parses the protobuf received from mediapipe and formats into a dict. '''
     landmark_list.ParseFromString(data)
@@ -44,60 +56,6 @@ def get_landmarks(data, landmark_list):
 
     return landmarks, landmark_list.handedness
 
-# class LandmarkHandler(socketserver.BaseRequestHandler):
-#     """
-#     The request handler class for our server.
-
-#     It is instantiated once per connection to the server, and must
-#     override the handle() method to implement communication to the
-#     client.
-#     """
-
-#     def setup(self):
-#         self.LandmarkList = landmarkList_pb2.LandmarkList()
-#         self.C = initialize_gesture_recognizer()
-
-#     def handle(self):
-#         # self.request is the TCP socket connected to the client
-#         print("{} wrote:".format(self.client_address[0]))
-#         count_empty = 0
-
-#         while True:
-#             self.data = self.request.recv()
-#             # Modules:
-#             # Mouse Tracking - responsible for tracking and moving the cursor
-#             # Config Detection - takes in the keypoints and outputs a configuration
-#             # Config Action - takes in a configuration and maps it to an action i.e. LeftClick
-
-#             # detect empty data (alias for client disconnected)
-#             if self.data == b'':
-#                 count_empty += 1
-#             if count_empty > 100 : break
-
-#             landmarks, handedness = get_landmarks(self.data, self.LandmarkList)
-#             print(handedness)
-#             # for l in landmarks: print(l)
-#             print("No. of landmarks:", len(landmarks))
-#             # get pointer location
-#             mouse_pointer, self.C['pointer_buffer'] = calc_pointer(landmarks, self.C['pointer_buffer'], self.C['iter'])
-
-#             # control the mouse
-#             self.C['prev_pointer'] = mouse_track(mouse_pointer, self.C['prev_pointer'], self.C['flags'])
-#             self.C['iter'] += 1
-#             # mouse tracker
-#             # run recognizer
-#             # run action executor
-#         # exit(0)
-
-
-# def run_socket_server():
-#     ''' Starts the server which receives data from medipipe. '''
-#     HOST, PORT = "0.0.0.0", 8089
-
-#     # Create the server
-#     with socketserver.TCPServer((HOST, PORT), LandmarkHandler) as server:
-#         print(f'Server now listening {PORT}')
-#         server.serve_forever()
 
 def handle_and_recognize(landmarks, handedness, C, S):
     '''
@@ -124,49 +82,47 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
     input_data = format_landmark(landmarks, handedness, C, mode)
     gesture, S = get_gesture(input_data, C, S)
-    # print(gesture)
+    print(f'handle_and_recognize: {gesture}')
 
     #################
     # Config Action #
     #################
 
-    S = config_action(gesture, S)
+    #S = config_action(gesture, S)
 
     return S
+
+
+def all_init():
+    # Initializing the state and the configuration
+    C = initialize_configuration()
+    S = initialize_state(C)
+    start_key_listener(S, C)
+    landmark_list = landmarkList_pb2.LandmarkList()
+
+    return C, S, landmark_list
+
+def process_data(data, landmark_list, C, S):
+    landmarks, handedness = get_landmarks(data, landmark_list)
+
+    S = handle_and_recognize(landmarks, handedness, C, S)
+
+    S['iter'] += 1
 
 def handle_zmq_stream():
     ''' Handles the incoming stream of data from mediapipe. '''
 
-    # Initializing the state and the configuration
-    C = initialize_configuration()
-    S = initialize_state(C)
-
-    # Wrapping on_press and on_release into higher order functions
-    # to avoid use of global variables
-    on_press_key = partial(on_press, S)
-    on_release_key = partial(on_release, S, C)
-
-    # Start the listener on another thread to listen to keypress events
-    listener = Listener(on_press=on_press_key,
-                        on_release=on_release_key)
-    listener.start()
+    C, S, landmark_list = all_init()
 
     # setup zmq context
     context = zmq.Context()
     sock = context.socket(zmq.PULL)
     sock.connect("tcp://127.0.0.1:5556")
 
-    landmark_list = landmarkList_pb2.LandmarkList()
-
     # Main while loop
     while True:
         data = sock.recv()
-
-        landmarks, handedness = get_landmarks(data, landmark_list)
-
-        S = handle_and_recognize(landmarks, handedness, C, S)
-
-        S['iter'] += 1
+        process_data(data, landmark_list, C, S)
 
         # The key listener thread has shut down, leaving only GestureThread and MainThread
         if threading.active_count() == 1:

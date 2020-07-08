@@ -2,7 +2,8 @@ import socket
 import struct
 from proto import landmarkList_pb2
 import socketserver
-
+import time
+import threading
 
 
 def get_landmarks(data, landmarkList):
@@ -18,6 +19,9 @@ def get_landmarks(data, landmarkList):
 
  
 
+
+from gesture_receiver import all_init, process_data
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """
     The request handler class for our server.
@@ -28,10 +32,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     """
 
     def setup(self):
-        self.LandmarkList = landmarkList_pb2.LandmarkList()
+        self.landmark_list = landmarkList_pb2.LandmarkList()
+        self.C, self.S, landmark_list = all_init()
+
+
+    def handle_data(self, data):
+        landmarks, handedness = get_landmarks(data, self.landmark_list)
+        #for l in landmarks: print(l)
+        #print(handedness)
+        #time.sleep(5)
+        
+        process_data(data, self.landmark_list, self.C, self.S)
+        
 
     def handle(self):
-        import time
         # self.request is the TCP socket connected to the client
         print("{} wrote:".format(self.client_address[0]))
         count_empty = 0
@@ -39,28 +53,26 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             msg_len = self.request.recv(4)
             msg_len = struct.unpack("I", msg_len)
             #print(msg_len)
-            self.data = self.request.recv(msg_len[0])
+            data = self.request.recv(msg_len[0])
             #print(f'--[{len(self.data)}]')
 
             # detect empty data (alias for client disconnected)
-            if self.data == b'': 
+            if data == b'': 
                 count_empty += 1
             if count_empty > 100 : break
 
-            landmarks, handedness = get_landmarks(self.data, self.LandmarkList)
-            for l in landmarks: print(l)
-            print(handedness)
-            time.sleep(5)
+            self.handle_data(data)
+
+            # The key listener thread has shut down, leaving only GestureThread and MainThread
+            if threading.active_count() == 1:
+                break
 
             # just send back the same data, but upper-cased
             #self.request.sendall(self.data.upper())
 
 
-def initialize_gesture_recognizer():
-    pass
 
 def run_socket_server():
-    initialize_gesture_recognizer()
 
     HOST, PORT = "0.0.0.0", 8089
 
