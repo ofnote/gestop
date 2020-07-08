@@ -46,6 +46,27 @@ def normalize(seq):
         i += 1
     return norm
 
+def resample_and_jitter(seq):
+    '''
+    Transformation Function. Augments the data in the following ways:
+    Randomly resamples the sequences to a different length. Adds noise
+    to training data to make a more robust network.
+    '''
+    # Probability of transformation
+    p_jitter = p_resample = 0.3
+    p_sample_len = 0.6
+
+    if np.random.random() < p_resample:
+        sample = np.random.choice(a=[True, False], size=(len(seq)),
+                                  p=[p_sample_len, 1 - p_sample_len])
+        seq = seq[torch.from_numpy(sample)]
+
+    if np.random.random() < p_jitter:
+        noise = np.random.normal(size=np.array(seq.shape), scale=0.05)
+        seq += noise
+
+    return seq.float()
+
 def format_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
@@ -126,6 +147,7 @@ def main():
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(normalize),
+        transforms.Lambda(resample_and_jitter),
         transforms.Lambda(format_vector),
     ])
 
@@ -152,10 +174,10 @@ def main():
                       deterministic=True,
                       default_root_dir='logs',
                       early_stop_callback=early_stopping)
-    # trainer.fit(model, train_loader, val_loader)
+    trainer.fit(model, train_loader, val_loader)
 
     PATH = 'models/shrec_net'
-    # torch.save(model.state_dict(), PATH)
+    torch.save(model.state_dict(), PATH)
 
     model.load_state_dict(torch.load(PATH))
     trainer.test(model, test_dataloaders=val_loader)
