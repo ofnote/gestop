@@ -95,6 +95,7 @@ class ShrecNet(LightningModule):
                           bidirectional=True, batch_first=True)
         self.fc1 = nn.Linear(self.hidden_dim*2, self.hidden_dim)
         self.fc2 = nn.Linear(self.hidden_dim, output_classes)
+
         self.time = time.time()
 
     def forward(self, x):
@@ -161,7 +162,7 @@ class ShrecNet(LightningModule):
         labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
                 'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
                 'Swipe V', 'Shake']
-        conf_mat = confusion_matrix(test_actual, test_pred)
+        conf_mat = confusion_matrix(test_actual, test_pred, normalize='true')
         disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
         disp = disp.plot(include_values=True, cmap=plt.cm.Blues, ax=None, xticks_rotation='vertical')
 

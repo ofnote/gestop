@@ -128,12 +128,14 @@ def get_dynamic_gesture(landmarks, C, S):
     # Store keypoints in buffer
     S['keypoint_buffer'].append(torch.tensor(landmarks))
 
+    gesture = 'bad'
     # Refer table above
     if not S['CTRL_FLAG'] and S['PREV_FLAG']:
-        return dynamic_gesture_detection(C, S)
-    else:
-        S['PREV_FLAG'] = S['CTRL_FLAG']
-        return 'bad', S
+        gesture, S = dynamic_gesture_detection(C, S)
+        S['keypoint_buffer'] = []
+
+    S['PREV_FLAG'] = S['CTRL_FLAG']
+    return gesture, S
 
 
 def dynamic_gesture_detection(C, S):
@@ -145,10 +147,7 @@ def dynamic_gesture_detection(C, S):
     gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)
-    # print(gesture_dict)
-    # print(gesture)
-
-    S['PREV_FLAG'] = S['CTRL_FLAG']
-    S['keypoint_buffer'] = []
+    print(gesture_dict)
+    print(gesture)
 
     return gesture, S

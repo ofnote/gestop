@@ -53,8 +53,9 @@ def resample_and_jitter(seq):
     to training data to make a more robust network.
     '''
     # Probability of transformation
-    p_jitter = p_resample = 0.3
-    p_sample_len = 0.6
+    p_jitter = p_resample = 0.6
+    resampled_len = list(np.arange(0.5, 1.0, 0.05))
+    p_sample_len = np.random.choice(resampled_len)
 
     if np.random.random() < p_resample:
         sample = np.random.choice(a=[True, False], size=(len(seq)),
