@@ -13,8 +13,8 @@ from sklearn.model_selection import train_test_split
 from torchvision import transforms
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
-
-from model import ShrecNet, ShrecDataset#, variable_length_collate
+from pytorch_lightning import loggers as pl_loggers
+from model import ShrecNet, ShrecDataset, init_weights#, variable_length_collate
 from config import initialize_configuration
 
 def init_seed(seed):
@@ -171,19 +171,24 @@ def main():
     output_classes = C['dynamic_output_classes']
 
     model = ShrecNet(input_dim, output_classes)
+    model.apply(init_weights)
     early_stopping = EarlyStopping(
         patience=3,
         verbose=True,
     )
 
+
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir='logs/',
+                                             name='lightning_logs')
+
     trainer = Trainer(gpus=1,
                       deterministic=True,
-                      default_root_dir='logs',
+                      logger=tb_logger,
                       early_stop_callback=early_stopping)
-    trainer.fit(model, train_loader, val_loader)
+    # trainer.fit(model, train_loader, val_loader)
 
     PATH = 'models/shrec_net'
-    torch.save(model.state_dict(), PATH)
+    # torch.save(model.state_dict(), PATH)
 
     model.load_state_dict(torch.load(PATH))
     trainer.test(model, test_dataloaders=val_loader)

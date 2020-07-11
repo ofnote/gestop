@@ -7,14 +7,18 @@ ShrecNet -> A GRU network which classifies dynamic gestures with data from SHREC
 
 import time
 import numpy as np
+from os import system
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+import torchvision.transforms.functional as TF
 #from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from pytorch_lightning.core.lightning import LightningModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+import matplotlib
+from PIL import Image
 
 class GestureNet(LightningModule):
     '''
@@ -117,8 +121,13 @@ class ShrecNet(LightningModule):
         output = self(x)
 
         loss = F.cross_entropy(output, y.long())
-        tensorboard_logs = {'train_loss': loss}
-        return {'loss': loss, 'log': tensorboard_logs}
+        # tensorboard_logs = {'train_loss': loss}
+        return {'loss': loss}
+
+    def training_epoch_end(self, outputs):
+        avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
+        tensorboard_logs = {'train_loss': avg_loss}
+        return {'train_loss': avg_loss, 'log':tensorboard_logs}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
@@ -162,12 +171,26 @@ class ShrecNet(LightningModule):
         labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
                 'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
                 'Swipe V', 'Shake']
+
+        font = {'size'   : 6}
+        matplotlib.rc('font', **font)
+
         conf_mat = confusion_matrix(test_actual, test_pred, normalize='true')
         disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
         disp = disp.plot(include_values=True, cmap=plt.cm.Blues, ax=None, xticks_rotation='vertical')
 
-        plt.show()
+        plt.savefig("conf_mat.jpg", bbox_inches='tight', pad_inches=0.5)
+        img_array = TF.to_tensor(Image.open('conf_mat.jpg'))
+        system('rm conf_mat.jpg')
+
+        self.logger.experiment.add_image('confusion_matrix', img_array)
         return {'test_acc':test_acc}
+
+def init_weights(m):
+    ''' Initializes weights of network with Xavier Initialization.'''
+    if type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
 
 #FIXME
 def variable_length_collate(batch):
