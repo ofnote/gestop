@@ -71,13 +71,18 @@ def resample_and_jitter(seq):
 def format_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
-    Only absolute coordinates being used are those of the wrist,
-    Calculates the relative hand vectors and appends them to the absolute coordinates.
     '''
-    new_seq = torch.zeros((len(seq), C['dynamic_input_dim']))  # 2 absolute + 32 relative
+    new_seq = torch.zeros((len(seq), C['dynamic_input_dim']))  # 4 absolute + 32 relative
     for i, iseq in enumerate(seq):
         # Absolute
-        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(32)])
+        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
+        # new_seq[i] = torch.zeros(34)
+        if i == 0: # start of sequence
+            new_seq[i][2] = iseq[0]
+            new_seq[i][3] = iseq[1]
+        else:  # change in postiion
+            new_seq[i][2] = iseq[0] - new_seq[i-1][0]
+            new_seq[i][3] = iseq[1] - new_seq[i-1][1]
 
         # Making a new sequence without the Palm keypoint for ease of calculation
         mediapipe_seq = torch.cat([iseq[0:2], iseq[4:]])
@@ -85,25 +90,25 @@ def format_mediapipe(C, seq):
         # Relative
         for j in range(4):
             # calculate L01, L12, L23, L34
-            new_seq[i][2+2*j] = mediapipe_seq[2*j+2] - mediapipe_seq[2*j] #L__X
-            new_seq[i][2+2*j+1] = mediapipe_seq[2*j+3] - mediapipe_seq[2*j+1] #L__Y
+            new_seq[i][4+2*j] = mediapipe_seq[2*j+2] - mediapipe_seq[2*j] #L__X
+            new_seq[i][4+2*j+1] = mediapipe_seq[2*j+3] - mediapipe_seq[2*j+1] #L__Y
 
         for j in range(3):
             # calculate L56, L67, L78
-            new_seq[i][10+2*j] = mediapipe_seq[2*j+12] - mediapipe_seq[2*j+10]
-            new_seq[i][10+2*j+1] = mediapipe_seq[2*j+13] - mediapipe_seq[2*j+11]
+            new_seq[i][12+2*j] = mediapipe_seq[2*j+12] - mediapipe_seq[2*j+10]
+            new_seq[i][12+2*j+1] = mediapipe_seq[2*j+13] - mediapipe_seq[2*j+11]
 
             # calculate L910, L1011, L1112
-            new_seq[i][16+2*j] = mediapipe_seq[2*j+20] - mediapipe_seq[2*j+18]
-            new_seq[i][16+2*j+1] = mediapipe_seq[2*j+21] - mediapipe_seq[2*j+19]
+            new_seq[i][18+2*j] = mediapipe_seq[2*j+20] - mediapipe_seq[2*j+18]
+            new_seq[i][18+2*j+1] = mediapipe_seq[2*j+21] - mediapipe_seq[2*j+19]
 
             # calculate L1314, L1415, L1516
-            new_seq[i][22+2*j] = mediapipe_seq[2*j+28] - mediapipe_seq[2*j+26]
-            new_seq[i][22+2*j+1] = mediapipe_seq[2*j+29] - mediapipe_seq[2*j+27]
+            new_seq[i][24+2*j] = mediapipe_seq[2*j+28] - mediapipe_seq[2*j+26]
+            new_seq[i][24+2*j+1] = mediapipe_seq[2*j+29] - mediapipe_seq[2*j+27]
 
             # calculate L1718, L1819, L1920
-            new_seq[i][28+2*j] = mediapipe_seq[2*j+36] - mediapipe_seq[2*j+34]
-            new_seq[i][28+2*j+1] = mediapipe_seq[2*j+37] - mediapipe_seq[2*j+35]
+            new_seq[i][30+2*j] = mediapipe_seq[2*j+36] - mediapipe_seq[2*j+34]
+            new_seq[i][30+2*j+1] = mediapipe_seq[2*j+37] - mediapipe_seq[2*j+35]
 
     return new_seq
 

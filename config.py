@@ -25,7 +25,7 @@ def initialize_configuration():
     C['static_output_classes'] = 6
 
     # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
-    C['dynamic_input_dim'] = 34
+    C['dynamic_input_dim'] = 36
     C['dynamic_output_classes'] = 14
 
     # Fetching gesture mappings
