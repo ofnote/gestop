@@ -7,18 +7,14 @@ ShrecNet -> A GRU network which classifies dynamic gestures with data from SHREC
 
 import time
 import numpy as np
-from os import system
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
-import torchvision.transforms.functional as TF
 #from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from pytorch_lightning.core.lightning import LightningModule
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 import matplotlib.pyplot as plt
-import matplotlib
-from PIL import Image
 
 class GestureNet(LightningModule):
     '''
@@ -56,9 +52,8 @@ class GestureNet(LightningModule):
                 'val_acc': np.argmax(output[0].cpu().numpy()) == y}
 
     def validation_epoch_end(self, outputs):
-        # FIXME - Last batch will not have 64
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        avg_acc = torch.stack([x['val_acc'] for x in outputs[:-1]]).float().mean()
+        avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
         tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
@@ -101,6 +96,7 @@ class ShrecNet(LightningModule):
         self.fc2 = nn.Linear(self.hidden_dim, output_classes)
 
         self.time = time.time()
+        self.epoch_time = []
 
     def forward(self, x):
         out, h = self.gru(x)
@@ -145,12 +141,12 @@ class ShrecNet(LightningModule):
                 'val_acc': np.argmax(output[0].cpu().numpy()) == y}
 
     def validation_epoch_end(self, outputs):
-        epochtime = time.time() - self.time
+        self.epoch_time.append(time.time() - self.time)
         self.time = time.time()
 
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
-        tensorboard_logs = {'val_loss': avg_loss, 'epoch_time': epochtime, 'val_acc': avg_acc}
+        tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_idx):
@@ -168,23 +164,38 @@ class ShrecNet(LightningModule):
         test_pred = np.array([x['test_pred'] for x in outputs])
         test_actual = torch.squeeze(torch.stack([x['test_actual'] for x in outputs])).cpu().numpy()
 
-        labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'Rotation Clockwise', 'Rotation Anticlockwise',
-                'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
-                'Swipe V', 'Shake']
+        labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'RClockwise', 'RCounterclockwise',
+                  'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
+                  'Swipe V', 'Shake']
 
-        font = {'size'   : 6}
-        matplotlib.rc('font', **font)
 
-        conf_mat = confusion_matrix(test_actual, test_pred, normalize='true')
+        report = classification_report(test_actual, test_pred,
+                                       target_names=labels, output_dict=True)
+        # String representation for easy vieweing
+        str_report = classification_report(test_actual, test_pred, target_names=labels)
+        print(str_report)
+
+        # Format the report
+        report.pop('accuracy')
+        report.pop('macro avg')
+        for key, value in report.items():
+            report[key].pop('support')
+
+        conf_mat = confusion_matrix(test_actual, test_pred)#, normalize='true')
         disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
-        disp = disp.plot(include_values=True, cmap=plt.cm.Blues, ax=None, xticks_rotation='vertical')
+        disp = disp.plot(include_values=True, cmap=plt.cm.Blues,
+                         ax=None, xticks_rotation='vertical')
+        disp.figure_.set_size_inches(12, 12)
 
-        plt.savefig("conf_mat.jpg", bbox_inches='tight', pad_inches=0.5)
-        img_array = TF.to_tensor(Image.open('conf_mat.jpg'))
-        system('rm conf_mat.jpg')
+        avg_epoch_time = sum(self.epoch_time)/max(len(self.epoch_time), 1)
 
-        self.logger.experiment.add_image('confusion_matrix', img_array)
-        return {'test_acc':test_acc}
+        metrics = {"test_acc":test_acc, "average_epoch_time":avg_epoch_time}
+
+        self.logger.experiment.log({"confusion_matrix":disp.figure_})
+        self.logger.log_metrics(metrics)
+        self.logger.log_metrics(report)
+
+        return metrics
 
 def init_weights(m):
     ''' Initializes weights of network with Xavier Initialization.'''

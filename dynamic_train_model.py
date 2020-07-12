@@ -5,6 +5,7 @@ Trains the network and saves it to disk.
 '''
 
 import os
+import argparse
 from functools import partial
 import numpy as np
 import torch
@@ -137,6 +138,12 @@ def read_data(seed_val):
 def main():
     ''' Main '''
 
+    parser = argparse.ArgumentParser(description='A program to train a neural network \
+    to recognize dynamic gestures. ')
+    parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
+
+    args = parser.parse_args()
+
     C = initialize_configuration()
     init_seed(C['seed_val'])
 
@@ -177,18 +184,22 @@ def main():
         verbose=True,
     )
 
+    # No name is given as a command line flag.
+    if args.exp_name is None:
+        args.exp_name = "default"
 
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir='logs/',
-                                             name='lightning_logs')
+    wandb_logger = pl_loggers.WandbLogger(save_dir='logs/',
+                                          name=args.exp_name,
+                                          project='gestures-mediapipe')
 
     trainer = Trainer(gpus=1,
                       deterministic=True,
-                      logger=tb_logger,
+                      logger=wandb_logger,
                       early_stop_callback=early_stopping)
-    # trainer.fit(model, train_loader, val_loader)
+    trainer.fit(model, train_loader, val_loader)
 
-    PATH = 'models/shrec_net'
-    # torch.save(model.state_dict(), PATH)
+    PATH = 'models/' + args.exp_name
+    torch.save(model.state_dict(), PATH)
 
     model.load_state_dict(torch.load(PATH))
     trainer.test(model, test_dataloaders=val_loader)
