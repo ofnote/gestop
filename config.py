@@ -57,7 +57,7 @@ def initialize_configuration():
 
     return C
 
-def initialize_state(C):
+def initialize_state(C, args):
     '''
     Initializes a set of parameters which will be modified while the application is runnning
     Represents the 'state' of the application
@@ -68,6 +68,8 @@ def initialize_state(C):
     S['pointer_buffer'] = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
     S['prev_pointer'] = 0, 0
 
+    S['mouse_track'] = args.mouse_track
+
     # Modes:
     # Each mode is a different method of interaction with the system.
     # Any given functionality might require the use of multiple modes
@@ -76,8 +78,10 @@ def initialize_state(C):
     #             E.g. left click, right click, scroll
     # 2. Gesture -> Intuitive gesture are performed to do complicated actions, such as switch
     #             worskpace, dim screen brightness etc.
-    S['modes'] = ['mouse', 'gesture']
-    # S['modes'] = ['gesture', 'mouse']
+    if args.start_mode == 'mouse':
+        S['modes'] = ['mouse', 'gesture']
+    else:
+        S['modes'] = ['gesture', 'mouse']
 
     # maintain a buffer of most recently detected configs
     S['static_config_buffer'] = ['', '', '', '', '']

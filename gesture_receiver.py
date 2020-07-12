@@ -5,6 +5,7 @@ Interfaces with the gesture recognizer and the gesture executor modules.
 
 import threading
 from functools import partial
+import argparse
 
 import torch
 import zmq
@@ -66,7 +67,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
     '''
     mode = S['modes'][0] #current mode
 
-    if mode == 'mouse':
+    if mode == 'mouse' and S['mouse_track']:
         ##################
         # Mouse Tracking #
         ##################
@@ -88,15 +89,15 @@ def handle_and_recognize(landmarks, handedness, C, S):
     # Config Action #
     #################
 
-    #S = config_action(gesture, S)
+    S = config_action(gesture, S)
 
     return S
 
 
-def all_init():
+def all_init(args):
     # Initializing the state and the configuration
     C = initialize_configuration()
-    S = initialize_state(C)
+    S = initialize_state(C, args)
     start_key_listener(S, C)
     landmark_list = landmarkList_pb2.LandmarkList()
 
@@ -109,10 +110,10 @@ def process_data(data, landmark_list, C, S):
 
     S['iter'] += 1
 
-def handle_zmq_stream():
+def handle_zmq_stream(args):
     ''' Handles the incoming stream of data from mediapipe. '''
 
-    C, S, landmark_list = all_init()
+    C, S, landmark_list = all_init(args)
 
     # setup zmq context
     context = zmq.Context()
@@ -124,7 +125,7 @@ def handle_zmq_stream():
         data = sock.recv()
         process_data(data, landmark_list, C, S)
 
-        # The key listener thread has shut down, leaving only GestureThread and MainThread
+        # The key listener thread has shut down, leaving only MainThread
         if threading.active_count() == 1:
             break
 
@@ -138,5 +139,14 @@ if __name__ == "__main__":
     # 2. MainThread -> The 'main' thread of execution
     # Receives, recognizes and executes gestures
 
-    handle_zmq_stream()
+    parser = argparse.ArgumentParser(description='An application to control the \
+    desktop through hand gestures.')
+    parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
+                        dest="mouse_track", action='store_false')
+    parser.add_argument("--start-mode", help="Mode to start the application in",
+                        type=str, default="mouse", choices=['mouse', 'gesture'])
+
+    args = parser.parse_args()
+
+    handle_zmq_stream(args)
     print("Shutdown successfully")
