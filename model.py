@@ -181,7 +181,7 @@ class ShrecNet(LightningModule):
         for key, value in report.items():
             report[key].pop('support')
 
-        conf_mat = confusion_matrix(test_actual, test_pred)#, normalize='true')
+        conf_mat = confusion_matrix(test_actual, test_pred, normalize='true')
         disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
         disp = disp.plot(include_values=True, cmap=plt.cm.Blues,
                          ax=None, xticks_rotation='vertical')
