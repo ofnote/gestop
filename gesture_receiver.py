@@ -7,12 +7,11 @@ import threading
 from functools import partial
 import argparse
 
-import torch
 import zmq
 from pynput.keyboard import Listener, Key
 
 from proto import landmarkList_pb2
-from config import initialize_configuration, initialize_state
+from config import Config, State
 from mouse_tracker import mouse_track, calc_pointer
 from gesture_recognizer import format_landmark, get_gesture
 from gesture_executor import config_action
@@ -22,22 +21,22 @@ def on_press(S, key):
     ''' Tracks keypresses. Sets the global CTRL_FLAG if the ctrl key is pressed.'''
     # print('{0} pressed'.format(key))
     if key == Key.ctrl:
-        S['CTRL_FLAG'] = True
+        S.ctrl_flag = True
 
-def on_release(S, C, key):
+def on_release(S, key):
     ''' Tracks keypresses. Unsets the global CTRL_FLAG if the ctrl key is released.'''
     # print('{0} release'.format(key))
     if key == Key.ctrl:
-        S['CTRL_FLAG'] = False
+        S.ctrl_flag = False
     if key == Key.esc:
         # Stop listener
         return False
 
-def start_key_listener(S, C):
+def start_key_listener(S):
     # Wrapping on_press and on_release into higher order functions
     # to avoid use of global variables
     on_press_key = partial(on_press, S)
-    on_release_key = partial(on_release, S, C)
+    on_release_key = partial(on_release, S)
 
     # Start the listener on another thread to listen to keypress events
     listener = Listener(on_press=on_press_key,
@@ -65,9 +64,9 @@ def handle_and_recognize(landmarks, handedness, C, S):
     2. A gesture is recognized, either static or dynamic
     3. The action corresponding to that gesture is executed.
     '''
-    mode = S['modes'][0] #current mode
+    mode = S.modes[0] #current mode
 
-    if mode == 'mouse' and S['mouse_track']:
+    if mode == 'mouse' and S.mouse_track:
         ##################
         # Mouse Tracking #
         ##################
@@ -96,9 +95,11 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
 def all_init(args):
     # Initializing the state and the configuration
-    C = initialize_configuration()
-    S = initialize_state(C, args)
-    start_key_listener(S, C)
+
+    C = Config()
+    S = State(start_mode=args.start_mode, mouse_track=args.mouse_track)
+
+    start_key_listener(S)
     landmark_list = landmarkList_pb2.LandmarkList()
 
     return C, S, landmark_list
@@ -108,7 +109,7 @@ def process_data(data, landmark_list, C, S):
 
     S = handle_and_recognize(landmarks, handedness, C, S)
 
-    S['iter'] += 1
+    S.iter += 1
 
 def handle_zmq_stream(args):
     ''' Handles the incoming stream of data from mediapipe. '''

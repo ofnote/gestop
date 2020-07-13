@@ -9,9 +9,9 @@ import torch
 def format_landmark(landmark, hand, C, mode):
     ''' A wrapper over format_static_landmark and format_dynamic_landmark. '''
     if mode == 'mouse':
-        return format_static_landmark(landmark, hand, C['static_input_dim'])
+        return format_static_landmark(landmark, hand, C.static_input_dim)
     else:
-        return format_dynamic_landmark(landmark, C['dynamic_input_dim'])
+        return format_dynamic_landmark(landmark, C.dynamic_input_dim)
 
 def format_static_landmark(landmark, hand, input_dim):
     '''
@@ -83,7 +83,7 @@ def format_dynamic_landmark(landmark, input_dim):
 
 def get_gesture(landmarks, C, S):
     ''' A wrapper over get_static_gesture and get_dynamic_gesture. '''
-    if S['modes'][0] == 'mouse':
+    if S.modes[0] == 'mouse':
         return get_static_gesture(landmarks, C), S
     else:
         return get_dynamic_gesture(landmarks, C, S)
@@ -95,9 +95,9 @@ def get_static_gesture(landmarks, C):
     Also decides if a 'bad gesture' was performed.
     '''
     landmarks = torch.tensor(landmarks, dtype=torch.float32)
-    out = C['gesture_net'](landmarks)
+    out = C.gesture_net(landmarks)
     #print(dict(zip(mapping.values(), softmax(out.detach().numpy()))))
-    gesture_dict = dict(zip(C['static_gesture_mapping'].values(), out.detach().numpy()))
+    gesture_dict = dict(zip(C.static_gesture_mapping.values(), out.detach().numpy()))
     # doubling the likelihood of the bad gesture to lower chances of misclassification
     gesture_dict['bad'] *= 2
     gesture = max(gesture_dict, key=gesture_dict.get)
@@ -122,19 +122,19 @@ def get_dynamic_gesture(landmarks, C, S):
     # | False    | True      | Key has been released. Time to detect.     |
     # |----------+-----------+--------------------------------------------|
 
-    if not S['CTRL_FLAG'] and not S['PREV_FLAG']:
+    if not S.ctrl_flag and not S.prev_flag:
         return 'bad', S
 
     # Store keypoints in buffer
-    S['keypoint_buffer'].append(torch.tensor(landmarks))
+    S.keypoint_buffer.append(torch.tensor(landmarks))
 
     gesture = 'bad'
     # Refer table above
-    if not S['CTRL_FLAG'] and S['PREV_FLAG']:
+    if not S.ctrl_flag and S.prev_flag:
         gesture, S = dynamic_gesture_detection(C, S)
-        S['keypoint_buffer'] = []
+        S.keypoint_buffer = []
 
-    S['PREV_FLAG'] = S['CTRL_FLAG']
+    S.prev_flag = S.ctrl_flag
     return gesture, S
 
 
@@ -142,12 +142,10 @@ def dynamic_gesture_detection(C, S):
     ''' Detection of Dynamic Gesture using ShrecNet. '''
 
     # Formatting network input
-    x = torch.unsqueeze(torch.stack(S['keypoint_buffer']), 0)
-    out = C['shrec_net'](x.float())
-    gesture_dict = dict(zip(C['dynamic_gesture_mapping'].values(), out[0].detach().numpy()))
+    x = torch.unsqueeze(torch.stack(S.keypoint_buffer), 0)
+    out = C.shrec_net(x.float())
+    gesture_dict = dict(zip(C.dynamic_gesture_mapping.values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)
-    print(gesture_dict)
-    print(gesture)
 
     return gesture, S

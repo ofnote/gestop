@@ -9,7 +9,7 @@ def config_action(config, S):
     '''
     Given a configuration, decides what action to perform.
     '''
-    if S['modes'][0] == 'mouse':
+    if S.modes[0] == 'mouse':
         return config_static_action(config, S)
     else:
         return config_dynamic_action(config, S)
@@ -25,29 +25,29 @@ def config_static_action(config, S):
     spiderman -> scroll
     hitchhike -> mode switch
     '''
-    valid = valid_config(config, S['static_config_buffer']) #check if valid gesture
-    S['static_config_buffer'][S['iter']%5] = config  #adding the new config to the buffer
+    valid = valid_config(config, S.static_config_buffer) #check if valid gesture
+    S.static_config_buffer[S.iter%5] = config  #adding the new config to the buffer
 
     if config == 'bad' or not valid:
         pyautogui.mouseUp()
-        S['flags']['mousedown'] = False
-        S['flags']['scroll'] = False
+        S.mouse_flags['mousedown'] = False
+        S.mouse_flags['scroll'] = False
     elif config == 'hitchhike':
         # Rotating list
-        S['modes'] = S['modes'][-1:] + S['modes'][:-1]
+        S.modes = S.modes[-1:] + S.modes[:-1]
     elif config == 'seven':
         pyautogui.mouseDown()
-        S['flags']['mousedown'] = True
-        S['flags']['scroll'] = False
+        S.mouse_flags['mousedown'] = True
+        S.mouse_flags['scroll'] = False
     elif config in ['four', 'eight', 'spiderman']:
         pyautogui.mouseUp()
-        S['flags']['mousedown'] = False
+        S.mouse_flags['mousedown'] = False
         if config == 'four':
             pyautogui.rightClick()
         elif config == 'eight':
             pyautogui.doubleClick()
         else: #spiderman
-            S['flags']['scroll'] = True
+            S.mouse_flags['scroll'] = True
 
     return S
 
@@ -62,7 +62,7 @@ def config_dynamic_action(config, S):
     Grab -> Mode switch
     Pinch/Expand -> Zoom in/out
     '''
-    S['dynamic_config_buffer'][S['iter']%30] = config  #adding the new config to the buffer
+    S.dynamic_config_buffer[S.iter%30] = config  #adding the new config to the buffer
 
     # Using pynput's Controller for virtual keyboard input
     keyboard = Controller()
@@ -93,7 +93,7 @@ def config_dynamic_action(config, S):
         keyboard.release(Key.print_screen)
     elif config == 'Tap':
         # Rotating list to switch modes
-        S['modes'] = S['modes'][-1:] + S['modes'][:-1]
+        S.modes = S.modes[-1:] + S.modes[:-1]
     else:
         pass
 
