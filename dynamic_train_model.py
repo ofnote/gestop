@@ -16,7 +16,7 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
 from model import ShrecNet, ShrecDataset, init_weights#, variable_length_collate
-from config import initialize_configuration
+from config import Config
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
@@ -73,7 +73,7 @@ def format_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
     '''
-    new_seq = torch.zeros((len(seq), C['dynamic_input_dim']))  # 4 absolute + 32 relative
+    new_seq = torch.zeros((len(seq), C.dynamic_input_dim))  # 4 absolute + 32 relative
     for i, iseq in enumerate(seq):
         # Absolute
         new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
@@ -144,14 +144,14 @@ def main():
 
     args = parser.parse_args()
 
-    C = initialize_configuration()
-    init_seed(C['seed_val'])
+    C = Config()
+    init_seed(C.seed_val)
 
     ##################
     # INPUT PIPELINE #
     ##################
 
-    train_x, test_x, train_y, test_y = read_data(C['seed_val'])
+    train_x, test_x, train_y, test_y = read_data(C.seed_val)
 
     # Higher order function to pass configuration to format_mediapipe
     format_vector = partial(format_mediapipe, C)
@@ -174,8 +174,8 @@ def main():
     # TRAINING #
     ############
 
-    input_dim = C['dynamic_input_dim']
-    output_classes = C['dynamic_output_classes']
+    input_dim = C.dynamic_input_dim
+    output_classes = C.dynamic_output_classes
 
     model = ShrecNet(input_dim, output_classes)
     model.apply(init_weights)

@@ -23,11 +23,13 @@ class Config:
 
     # Refer make_vector() in train_model.py to verify input dimensions
     static_input_dim: int = 49
-    static_output_classes: int = 6
+    static_output_classes: int = 7
 
     # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
     dynamic_input_dim: int = 36
     dynamic_output_classes: int = 14
+
+    batch_size: int = 64
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
@@ -40,7 +42,7 @@ class Config:
 
     def __post_init__(self):
         # Fetching gesture mappings
-        with open('data/gesture_mapping.json', 'r') as jsonfile:
+        with open('data/static_gesture_mapping.json', 'r') as jsonfile:
             self.static_gesture_mapping = json.load(jsonfile)
         with open('data/dynamic_gesture_mapping.json', 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)

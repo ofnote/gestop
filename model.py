@@ -53,7 +53,7 @@ class GestureNet(LightningModule):
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
+        avg_acc = torch.stack([x['val_acc'] for x in outputs[:-1]]).float().mean()
         tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 

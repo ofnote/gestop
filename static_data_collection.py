@@ -4,14 +4,15 @@ zmq/protobuf and then writes them to a csv file to create a gesture dataset.
 To be run repeatedly for each gesture
 '''
 
-import random
 import time
 import zmq
 from proto import landmarkList_pb2
 
-# Returns the headers of the dataset
-# Header Format -> L0X,L0Y,L0Z,L1X......L20X,L20Y,L20Z,HAND
 def dataset_headers():
+    '''
+    Returns the headers of the dataset
+    Header Format -> L0X,L0Y,L0Z,L1X......L20X,L20Y,L20Z,HAND
+    '''
     data_str = ''
     # 21 - number of landmarks
     for i in range(21):
@@ -20,10 +21,13 @@ def dataset_headers():
     return data_str
 
 
-# Formats the input data in CSV style, and returns a comma separated string i.e. a row
 def add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED):
+    '''
+    Formats the input data in CSV style, and returns a comma separated string i.e. a row
+    '''
     row_str = ''
-    if actual_hand != handedness or (landmarks[0]['x'] == 0 and landmarks[0]['y'] == 0): #wrong capture
+    if actual_hand != handedness or (landmarks[0]['x'] == 0 and
+                                     landmarks[0]['y'] == 0): #wrong capture
         ROWS_ADDED -= 1 #to counter the increment in the main loop
     else:
         for i in range(len(landmarks)):
@@ -35,7 +39,8 @@ def add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED):
 
 
 def main():
-
+    ''' Main '''
+   
     # Setting up connection
     context = zmq.Context()
     sock = context.socket(zmq.PULL)
@@ -44,7 +49,9 @@ def main():
     landmarkList = landmarkList_pb2.LandmarkList()
 
 
-    actual_hand = int(input("Enter the hand for which you are collecting gesture data:\n0) left \t1) right\n"))
+    actual_hand = int(input("Enter the hand for which you are collecting \
+    gesture data:\n0) left \t1) right\n"))
+
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple one word description of the orientation of your hand) :\n")
 
@@ -55,7 +62,7 @@ def main():
     ROWS_ADDED = 0
     NSAMPLES = 1000
 
-    f = open("static_gestures_data.csv", 'a+')
+    f = open("data/static_gestures_data.csv", 'a+')
     #set pointer at beginning of file
     f.seek(0)
 

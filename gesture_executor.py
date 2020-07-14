@@ -35,6 +35,8 @@ def config_static_action(config, S):
     elif config == 'hitchhike':
         # Rotating list
         S.modes = S.modes[-1:] + S.modes[:-1]
+    elif config == 'fist':
+        S.mouse_track = not(S.mouse_track) # toggle
     elif config == 'seven':
         pyautogui.mouseDown()
         S.mouse_flags['mousedown'] = True
