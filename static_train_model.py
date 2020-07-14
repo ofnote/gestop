@@ -11,6 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from model import GestureNet, GestureDataset
+from config import Config
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
@@ -95,10 +96,9 @@ def calc_accuracy(ans, pred):
 
 def main():
     ''' Main '''
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    EPOCHS = 10
-    SEED_VAL = 42
-    init_seed(SEED_VAL)
+
+    C = Config()
+    init_seed(C.seed_val)
 
     ##################
     # INPUT PIPELINE #
@@ -106,7 +106,7 @@ def main():
 
     # Read and format the csv
     df = pd.read_csv("data/static_gestures_data.csv")
-    train, test = train_test_split(df, test_size=0.1, random_state=SEED_VAL)
+    train, test = train_test_split(df, test_size=0.1, random_state=C.seed_val)
     train_X, train_Y = split_dataframe(train)
     test_X, test_Y = split_dataframe(test)
 
@@ -120,21 +120,17 @@ def main():
     # Store encoding to disk
     le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
     print(le_name_mapping)
-    with open('data/gesture_mapping.json', 'w') as f:
+    with open('data/static_gesture_mapping.json', 'w') as f:
         f.write(json.dumps(le_name_mapping))
 
 
     train_Y = le.transform(train_Y)
     test_Y = le.transform(test_Y)
 
-    BATCH_SIZE = 64
-    train_loader = format_and_load(train_X, train_Y, BATCH_SIZE)
-    test_loader = format_and_load(test_X, test_Y, BATCH_SIZE)
+    train_loader = format_and_load(train_X, train_Y, C.batch_size)
+    test_loader = format_and_load(test_X, test_Y, C.batch_size)
 
-    OUTPUT_CLASSES = 6
-    INPUT_DIM = 49 #refer make_vector() to verify input dimensions
-
-    gesture_net = GestureNet(INPUT_DIM, OUTPUT_CLASSES)
+    gesture_net = GestureNet(C.static_input_dim, C.static_output_classes)
 
     early_stopping = EarlyStopping(
         patience=3,
