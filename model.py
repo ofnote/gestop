@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
-#from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from pytorch_lightning.core.lightning import LightningModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 import matplotlib.pyplot as plt
@@ -98,9 +98,12 @@ class ShrecNet(LightningModule):
         self.time = time.time()
         self.epoch_time = []
 
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=0.001)
+
     def forward(self, x):
         out, h = self.gru(x)
-        # out = pad_packed_sequence(out, batch_first=True)[0] #FIXME
+        out = pad_packed_sequence(out, batch_first=True)[0]
         last_out = out[:, -1]
         last_out = F.leaky_relu(last_out)
         last_out = F.leaky_relu(self.fc1(last_out))
@@ -108,16 +111,12 @@ class ShrecNet(LightningModule):
         return last_out
 
     def training_step(self, batch, batch_idx):
-        # x, y, data_len = batch
-        x, y = batch
+        x, y, data_len = batch
 
-        #FIXME
-        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
-        # output = self(x_packed)
-        output = self(x)
+        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        output = self(x_packed)
 
         loss = F.cross_entropy(output, y.long())
-        # tensorboard_logs = {'train_loss': loss}
         return {'loss': loss}
 
     def training_epoch_end(self, outputs):
@@ -125,49 +124,42 @@ class ShrecNet(LightningModule):
         tensorboard_logs = {'train_loss': avg_loss}
         return {'train_loss': avg_loss, 'log':tensorboard_logs}
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.001)
-
     def validation_step(self, batch, batch_idx):
-        # x, y, data_len = batch
-        x, y = batch
+        x, y, data_len = batch
 
-        #FIXME
-        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
-        # output = self(x_packed)
-        output = self(x)
+        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        output = self(x_packed)
 
         return {'val_loss': F.cross_entropy(output, y.long()),
-                'val_acc': np.argmax(output[0].cpu().numpy()) == y}
+                'val_acc': torch.argmax(output, axis=1) == y}
 
     def validation_epoch_end(self, outputs):
         self.epoch_time.append(time.time() - self.time)
         self.time = time.time()
 
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        avg_acc = torch.stack([x['val_acc'] for x in outputs]).float().mean()
+        avg_acc = torch.cat([x['val_acc'] for x in outputs]).float().mean()
         tensorboard_logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_idx):
-        x, y = batch
+        x, y, data_len = batch
 
-        output = self(x)
+        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        output = self(x_packed)
 
-        return {'test_acc': np.argmax(output[0].cpu().numpy()) == y,
-                'test_pred': np.argmax(output[0].cpu().numpy()),
+        return {'test_acc': torch.argmax(output, axis=1) == y,
+                'test_pred': torch.argmax(output, axis=1),
                 'test_actual': y}
 
     def test_epoch_end(self, outputs):
-        # print(torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()))
-        test_acc = torch.squeeze(torch.stack([x['test_acc'] for x in outputs]).float()).mean()
-        test_pred = np.array([x['test_pred'] for x in outputs])
-        test_actual = torch.squeeze(torch.stack([x['test_actual'] for x in outputs])).cpu().numpy()
+        test_acc = torch.cat([x['test_acc'] for x in outputs]).float().mean()
+        test_pred = torch.cat([x['test_pred'] for x in outputs]).cpu().numpy()
+        test_actual = torch.cat([x['test_actual'] for x in outputs]).cpu().numpy()
 
         labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'RClockwise', 'RCounterclockwise',
                   'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
                   'Swipe V', 'Shake']
-
 
         report = classification_report(test_actual, test_pred,
                                        target_names=labels, output_dict=True)
@@ -203,7 +195,6 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
-#FIXME
 def variable_length_collate(batch):
     ''' Custom collate function to handle variable length sequences. '''
     target = torch.empty(len(batch))

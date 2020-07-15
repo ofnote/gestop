@@ -15,7 +15,7 @@ from torchvision import transforms
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from model import ShrecNet, ShrecDataset, init_weights#, variable_length_collate
+from model import ShrecNet, ShrecDataset, init_weights, variable_length_collate
 from config import Config
 
 def init_seed(seed):
@@ -164,11 +164,10 @@ def main():
         transforms.Lambda(format_vector),
     ])
 
-    #FIXME -> fix variable_length_collate so that batches can be used.
     train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
-                              num_workers=10)#, batch_size=16, collate_fn=variable_length_collate)
+                              num_workers=10, batch_size=2, collate_fn=variable_length_collate)
     val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
-                            num_workers=10)#, batch_size=16, collate_fn=variable_length_collate)
+                            num_workers=10, batch_size=2, collate_fn=variable_length_collate)
 
     ############
     # TRAINING #
