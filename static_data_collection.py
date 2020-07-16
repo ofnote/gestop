@@ -1,6 +1,6 @@
 '''
-This script receives the hand keypoints detected by the mediapipe through
-zmq/protobuf and then writes them to a csv file to create a gesture dataset.
+This script receives the hand keypoints detected by mediapipe through
+zmq and then writes them to a csv file to create a gesture dataset.
 To be run repeatedly for each gesture
 '''
 
@@ -75,11 +75,6 @@ def main():
 
     while ROWS_ADDED < NSAMPLES:
         data = sock.recv()
-
-        # Since a small amount of data is being captured, and variety is to be maintained,
-        # this random check will ensure data is collected slowly by discarding 30% of data.
-        #if random.random() < 0.3:
-        #    continue
 
         landmarkList.ParseFromString(data)
         landmarks = []

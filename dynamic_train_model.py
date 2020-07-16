@@ -113,7 +113,6 @@ def format_mediapipe(C, seq):
 
     return new_seq
 
-
 def read_data(seed_val):
     ''' Reads data from SHREC2017 dataset files. '''
     # Change this as per your system
@@ -164,10 +163,18 @@ def main():
         transforms.Lambda(format_vector),
     ])
 
-    train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
-                              num_workers=10, batch_size=2, collate_fn=variable_length_collate)
-    val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
-                            num_workers=10, batch_size=2, collate_fn=variable_length_collate)
+    if C.batch_with == 'dataloader':
+        train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
+                                  num_workers=10, batch_size=C.dynamic_batch_size,
+                                  collate_fn=variable_length_collate)
+        val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
+                                num_workers=10, batch_size=C.dynamic_batch_size,
+                                collate_fn=variable_length_collate)
+    else:
+        train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
+                                  num_workers=10, batch_size=1)
+        val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
+                                num_workers=10, batch_size=1)
 
     ############
     # TRAINING #
@@ -191,10 +198,20 @@ def main():
                                           name=args.exp_name,
                                           project='gestures-mediapipe')
 
-    trainer = Trainer(gpus=1,
-                      deterministic=True,
-                      logger=wandb_logger,
-                      early_stop_callback=early_stopping)
+    if C.batch_with == 'dataloader':
+        trainer = Trainer(gpus=1,
+                          deterministic=True,
+                          logger=wandb_logger,
+                          min_epochs=C.min_epochs,
+                          early_stop_callback=early_stopping)
+    else:
+        trainer = Trainer(gpus=1,
+                          deterministic=True,
+                          logger=wandb_logger,
+                          min_epochs=C.min_epochs,
+                          accumulate_grad_batches=C.dynamic_batch_size,
+                          early_stop_callback=early_stopping)
+
     trainer.fit(model, train_loader, val_loader)
 
     PATH = 'models/' + args.exp_name

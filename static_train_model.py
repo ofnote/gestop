@@ -127,8 +127,8 @@ def main():
     train_Y = le.transform(train_Y)
     test_Y = le.transform(test_Y)
 
-    train_loader = format_and_load(train_X, train_Y, C.batch_size)
-    test_loader = format_and_load(test_X, test_Y, C.batch_size)
+    train_loader = format_and_load(train_X, train_Y, C.static_batch_size)
+    test_loader = format_and_load(test_X, test_Y, C.static_batch_size)
 
     gesture_net = GestureNet(C.static_input_dim, C.static_output_classes)
 
@@ -140,10 +140,11 @@ def main():
     trainer = Trainer(gpus=1,
                       deterministic=True,
                       default_root_dir='logs',
+                      min_epochs=C.min_epochs,
                       early_stop_callback=early_stopping)
     trainer.fit(gesture_net, train_loader, test_loader)
-    # model.load_state_dict(torch.load(PATH))
-    # trainer.test(model, test_dataloaders=val_loader)
+    # gesture_net.load_state_dict(torch.load(PATH))
+    # trainer.test(gesture_net, test_dataloaders=test_loader)
 
     ################
     # SAVING MODEL #

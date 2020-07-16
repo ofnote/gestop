@@ -29,7 +29,16 @@ class Config:
     dynamic_input_dim: int = 36
     dynamic_output_classes: int = 14
 
-    batch_size: int = 64
+    # Minimum number of epochs
+    min_epochs: int = 15
+
+    # FIXME
+    # Method of batching to use: dataloader or accum_grad
+    # dataloader does not give good results training ShrecNet
+    batch_with: str = 'accum_grad'
+
+    static_batch_size: int = 64
+    dynamic_batch_size: int = 8
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
