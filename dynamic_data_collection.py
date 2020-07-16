@@ -7,36 +7,15 @@ To be run repeatedly for each gesture
 import os
 import threading
 import zmq
-from pynput.keyboard import Listener, Key
 from proto import landmarkList_pb2
-
-def on_press(key):
-    ''' Tracks keypresses. Sets ctrl_flag if the ctrl key is pressed.'''
-    global CTRL_FLAG
-    # print('{0} pressed'.format(key))
-    if key == Key.ctrl:
-        CTRL_FLAG = True
-
-def on_release(key):
-    ''' Tracks keypresses. Unsets the global ctrl_flag if the ctrl key is released.'''
-    global CTRL_FLAG
-    # print('{0} release'.format(key))
-    if key == Key.ctrl:
-        CTRL_FLAG = False
-    if key == Key.esc:
-        # Stop listener
-        return False
-
-def start_key_listener():
-    # Start the listener on another thread to listen to keypress events
-    listener = Listener(on_press=on_press,
-                        on_release=on_release)
-
-    listener.start()
+from config import State
+from gesture_receiver import start_key_listener
 
 def main():
     ''' Main '''
-    global CTRL_FLAG
+
+    # using None because arguments are irrelevant
+    S = State(None, None)
 
     # Setting up connection
     context = zmq.Context()
@@ -46,7 +25,7 @@ def main():
     landmarkList = landmarkList_pb2.LandmarkList()
 
     gesture = input("Enter the name of the gesture for which you are capturing data, \
-    (a simple one word description of the gesture you will perform) :\n")
+    (a simple description of the gesture you will perform) :\n")
 
     print("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
 
@@ -55,21 +34,21 @@ def main():
         os.mkdir(path)
 
     count = 1
-    start_key_listener()
+    start_key_listener(S)
     keypoint_buffer = []
 
     while True:
-        if CTRL_FLAG:
-            fname = path+"/"+gesture+str(count)+".txt"
+        if S.ctrl_flag:
+            fname = path + "/" + gesture + str(count) + ".txt"
             f = open(fname, 'w')
 
-        while CTRL_FLAG:
+        while S.ctrl_flag:
             data = sock.recv()
 
             landmarkList.ParseFromString(data)
             landmarks = []
             for lmark in landmarkList.landmark:
-                landmarks.extend([str(lmark.x), str(lmark.y) ,str(lmark.z)])
+                landmarks.extend([str(lmark.x), str(lmark.y), str(lmark.z)])
 
             keypoint_buffer.append(landmarks)
 
@@ -88,7 +67,5 @@ def main():
         if threading.active_count() == 1:
             break
 
-if __name__ =='__main__':
-    # Using CTRL_FLAG as a global variable
-    CTRL_FLAG = False
+if __name__ == '__main__':
     main()
