@@ -18,13 +18,13 @@ from gesture_executor import config_action
 
 
 def on_press(S, key):
-    ''' Tracks keypresses. Sets the global CTRL_FLAG if the ctrl key is pressed.'''
+    ''' Tracks keypresses. Sets ctrl_flag if the ctrl key is pressed.'''
     # print('{0} pressed'.format(key))
     if key == Key.ctrl:
         S.ctrl_flag = True
 
 def on_release(S, key):
-    ''' Tracks keypresses. Unsets the global CTRL_FLAG if the ctrl key is released.'''
+    ''' Tracks keypresses. Unsets ctrl_flag if the ctrl key is released.'''
     # print('{0} release'.format(key))
     if key == Key.ctrl:
         S.ctrl_flag = False
