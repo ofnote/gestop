@@ -18,6 +18,10 @@ class Config:
     else:
         map_location = None
 
+    # If lite is true, then the neural networks are not loaded into the config
+    # This is useful in scripts which do not use the network, or may modify the network.
+    lite: bool
+
     # Seed value for reproducibility
     seed_val: int = 42
 
@@ -27,24 +31,23 @@ class Config:
 
     # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
     dynamic_input_dim: int = 36
-    dynamic_output_classes: int = 14
+    dynamic_output_classes: int = 15
 
     # Minimum number of epochs
     min_epochs: int = 15
 
-    # FIXME
-    # Method of batching to use: dataloader or accum_grad
-    # dataloader does not give good results training ShrecNet
-    batch_with: str = 'accum_grad'
-
     static_batch_size: int = 64
-    dynamic_batch_size: int = 8
+    dynamic_batch_size: int = 1
+
+    # value for pytorch-lighting trainer attribute accumulate_grad_batches
+    grad_accum: int = 8
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
 
     static_path: str = 'models/gesture_net'
-    dynamic_path: str = 'models/shrec_net'
+    shrec_path: str = 'models/shrec_net'
+    dynamic_path: str = 'models/user_net'
 
     gesture_net: GestureNet = field(init=False)
     shrec_net: ShrecNet = field(init=False)
@@ -61,19 +64,19 @@ class Config:
         pyautogui.PAUSE = 0.01
 
         # Setting up networks
+        if not self.lite:
+            print('Loading GestureNet...')
+            self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes)
+            self.gesture_net.load_state_dict(torch.load(self.static_path,
+                                                        map_location=self.map_location))
+            self.gesture_net.eval()
 
-        print('Loading GestureNet...')
-        self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes)
-        self.gesture_net.load_state_dict(torch.load(self.static_path,
-                                                    map_location=self.map_location))
-        self.gesture_net.eval()
+            print('Loading ShrecNet..')
 
-        print('Loading ShrecNet..')
-
-        self.shrec_net = ShrecNet(self.dynamic_input_dim, self.dynamic_output_classes)
-        self.shrec_net.load_state_dict(torch.load(self.dynamic_path,
-                                                  map_location=self.map_location))
-        self.shrec_net.eval()
+            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.dynamic_output_classes)
+            self.shrec_net.load_state_dict(torch.load(self.dynamic_path,
+                                                      map_location=self.map_location))
+            self.shrec_net.eval()
 
 
 @dataclass

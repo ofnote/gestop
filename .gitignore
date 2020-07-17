@@ -2,3 +2,5 @@ libzmq.so
 zmq.hpp
 __pycache__
 logs
+dynamic_gestures
+static_gestures_data.csv

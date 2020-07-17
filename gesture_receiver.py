@@ -96,7 +96,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
 def all_init(args):
     # Initializing the state and the configuration
 
-    C = Config()
+    C = Config(lite=False)
     S = State(start_mode=args.start_mode, mouse_track=args.mouse_track)
 
     start_key_listener(S)

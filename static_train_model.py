@@ -97,7 +97,7 @@ def calc_accuracy(ans, pred):
 def main():
     ''' Main '''
 
-    C = Config()
+    C = Config(lite=True)
     init_seed(C.seed_val)
 
     ##################
@@ -150,8 +150,7 @@ def main():
     # SAVING MODEL #
     ################
 
-    PATH = 'models/gesture_net'
-    torch.save(gesture_net.state_dict(), PATH)
+    torch.save(gesture_net.state_dict(), C.static_path)
 
 
 if __name__ == '__main__':
