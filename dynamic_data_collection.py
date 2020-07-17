@@ -38,13 +38,9 @@ def main():
     keypoint_buffer = []
 
     while True:
+        data = sock.recv()
+
         if S.ctrl_flag:
-            fname = path + "/" + gesture + str(count) + ".txt"
-            f = open(fname, 'w')
-
-        while S.ctrl_flag:
-            data = sock.recv()
-
             landmarkList.ParseFromString(data)
             landmarks = []
             for lmark in landmarkList.landmark:
@@ -52,17 +48,26 @@ def main():
 
             keypoint_buffer.append(landmarks)
 
-        if len(keypoint_buffer) != 0:
+        if len(keypoint_buffer) != 0 and not S.ctrl_flag:
+            fname = path + "/" + gesture + str(count) + ".txt"
             lmark_str = ''
             for i in keypoint_buffer:
+                # verifying data quality
+                if '0.0' in i:
+                    lmark_str = ''
+                    break
                 lmark_str += ' '.join(i) + '\n'
 
-            f.write(lmark_str)
-            f.close()
-            print("Gesture has been successfully recorded in " + fname)
+            if lmark_str != '':
+                with open(fname, 'w') as f:
+                    f.write(lmark_str)
 
+                print("Gesture has been successfully recorded in " + fname + \
+                      '. Sequence len:' + str(len(keypoint_buffer)))
+                count += 1
+            else:
+                print("Data was not recorded properly, not written to file.")
             keypoint_buffer = []
-            count += 1
 
         if threading.active_count() == 1:
             break

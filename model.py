@@ -98,12 +98,16 @@ class ShrecNet(LightningModule):
         self.time = time.time()
         self.epoch_time = []
 
+    def replace_layers(self, new_output_classes):
+        ''' Replacing last layer to learn with new gestures. '''
+        self.fc2 = nn.Linear(self.hidden_dim, new_output_classes)
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
     def forward(self, x):
         out, h = self.gru(x)
-        out = pad_packed_sequence(out, batch_first=True)[0]
+        # out = pad_packed_sequence(out, batch_first=True)[0]
         last_out = out[:, -1]
         last_out = F.leaky_relu(last_out)
         last_out = F.leaky_relu(self.fc1(last_out))
@@ -111,10 +115,12 @@ class ShrecNet(LightningModule):
         return last_out
 
     def training_step(self, batch, batch_idx):
-        x, y, data_len = batch
+        # x, y, data_len = batch
+        x, y = batch
 
-        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
-        output = self(x_packed)
+        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        # output = self(x_packed)
+        output = self(x)
 
         loss = F.cross_entropy(output, y.long())
         return {'loss': loss}
@@ -125,10 +131,12 @@ class ShrecNet(LightningModule):
         return {'train_loss': avg_loss, 'log':tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
-        x, y, data_len = batch
+        # x, y, data_len = batch
+        x, y = batch
 
-        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
-        output = self(x_packed)
+        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        # output = self(x_packed)
+        output = self(x)
 
         return {'val_loss': F.cross_entropy(output, y.long()),
                 'val_acc': torch.argmax(output, axis=1) == y}
@@ -143,10 +151,12 @@ class ShrecNet(LightningModule):
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_idx):
-        x, y, data_len = batch
+        # x, y, data_len = batch
+        x, y = batch
 
-        x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
-        output = self(x_packed)
+        # x_packed = pack_padded_sequence(x, data_len, batch_first=True, enforce_sorted=False)
+        # output = self(x_packed)
+        output = self(x)
 
         return {'test_acc': torch.argmax(output, axis=1) == y,
                 'test_pred': torch.argmax(output, axis=1),
@@ -159,7 +169,7 @@ class ShrecNet(LightningModule):
 
         labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'RClockwise', 'RCounterclockwise',
                   'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
-                  'Swipe V', 'Shake']
+                  'Swipe V', 'Shake', 'Circle']
 
         report = classification_report(test_actual, test_pred,
                                        target_names=labels, output_dict=True)
@@ -207,20 +217,25 @@ def variable_length_collate(batch):
         target[i] = tar
     return data, target, data_lengths
 
-
 class ShrecDataset(Dataset):
     '''
-    Implementation of a ShrecDataset which stores the raw SHREC data and formats it as required
-    by the network during training.
+    Implementation of a ShrecDataset which stores both SHREC and user data and
+    formats it as required by the network during training.
     '''
-    def __init__(self, input_data, target, transform):
+    def __init__(self, input_data, target, base_transform, final_transform):
         self.input_data = input_data
         self.target = target
-        self.transform = transform
+        self.base_transform = base_transform
+        self.final_transform = final_transform
 
     def __len__(self):
         return len(self.input_data)
 
     def __getitem__(self, index):
-        x = self.transform(self.input_data[index])
+        x = self.base_transform(self.input_data[index])
+        l = len(x[0])
+        if l == 63: # user data (21*3=63)
+            x = self.final_transform[1](x)
+        else: # shrec data (22*2=44)
+            x = self.final_transform[0](x)
         return (x, self.target[index])

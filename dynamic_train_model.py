@@ -1,5 +1,5 @@
 '''
-Loads the dynamic gesture data from the SHREC dataset,
+Loads the dynamic gesture data from both SHREC and user captured data,
 Transforms and prepares dataset in the form of a DataLoader
 Trains the network and saves it to disk.
 '''
@@ -69,7 +69,7 @@ def resample_and_jitter(seq):
 
     return seq.float()
 
-def format_mediapipe(C, seq):
+def shrec_to_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
     '''
@@ -113,7 +113,48 @@ def format_mediapipe(C, seq):
 
     return new_seq
 
-def read_data(seed_val):
+def user_to_mediapipe(C, seq):
+    '''
+    Transformation Function. Formats the normalized keypoints as per mediapipe output.
+    '''
+    new_seq = torch.zeros((len(seq), C.dynamic_input_dim))  # 4 absolute + 32 relative
+    for i, iseq in enumerate(seq):
+        # Absolute
+        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
+
+        if i == 0: # start of sequence
+            new_seq[i][2] = iseq[0]
+            new_seq[i][3] = iseq[1]
+        else:  # change in postiion
+            new_seq[i][2] = iseq[0] - new_seq[i-1][0]
+            new_seq[i][3] = iseq[1] - new_seq[i-1][1]
+
+        # Relative
+        for j in range(4):
+            # calculate L01, L12, L23, L34
+            new_seq[i][4+2*j] = iseq[3*j+3] - iseq[3*j] #L__X
+            new_seq[i][4+2*j+1] = iseq[3*j+4] - iseq[3*j+1] #L__Y
+
+        for j in range(3):
+            # calculate L56, L67, L78
+            new_seq[i][12+2*j] = iseq[3*j+18] - iseq[3*j+15]
+            new_seq[i][12+2*j+1] = iseq[3*j+19] - iseq[3*j+16]
+
+            # calculate L910, L1011, L1112
+            new_seq[i][18+2*j] = iseq[3*j+30] - iseq[3*j+27]
+            new_seq[i][18+2*j+1] = iseq[3*j+31] - iseq[3*j+28]
+
+            # calculate L1314, L1415, L1516
+            new_seq[i][24+2*j] = iseq[3*j+42] - iseq[3*j+39]
+            new_seq[i][24+2*j+1] = iseq[3*j+43] - iseq[3*j+40]
+
+            # calculate L1718, L1819, L1920
+            new_seq[i][30+2*j] = iseq[3*j+54] - iseq[3*j+51]
+            new_seq[i][30+2*j+1] = iseq[3*j+55] - iseq[3*j+52]
+
+    return new_seq
+
+def read_shrec_data():
     ''' Reads data from SHREC2017 dataset files. '''
     # Change this as per your system
     base_directory = "/home/sriramsk/Desktop/HandGestureDataset_SHREC2017"
@@ -131,19 +172,49 @@ def read_data(seed_val):
                     gesture_arr.append(data)
                     target_arr.append(gesture_no)
         gesture_no += 1
-    return train_test_split(gesture_arr, target_arr,
-                            test_size=0.2, random_state=seed_val)
+    return gesture_arr, target_arr
+
+def read_user_data():
+    ''' Reads the user collected data. '''
+    base_directory = "data/dynamic_gestures"
+
+    gesture_arr = []
+    target_arr = []
+    gesture_no = 14 #no. of gestures in SHREC
+
+    for gesture in os.listdir(base_directory): # for each gesture
+        for g in os.listdir(base_directory+'/'+gesture):
+            data = np.loadtxt(base_directory+'/'+gesture+'/'+g)
+            gesture_arr.append(data)
+            target_arr.append(gesture_no)
+        gesture_no += 1
+
+    return gesture_arr, target_arr
+
+def read_data(seed_val):
+    gesture_shrec, target_shrec = read_shrec_data()
+    gesture_user, target_user = read_user_data()
+
+    gesture = gesture_shrec + gesture_user
+    target = target_shrec + target_user
+    return train_test_split(gesture, target, test_size=0.2, random_state=seed_val)
+
+def choose_collate(collate_fn, C):
+    ''' Returns None(default collate) if batch size is 1, else custom collate. '''
+    if C.dynamic_batch_size == 1:
+        return None
+    return collate_fn
 
 def main():
     ''' Main '''
 
     parser = argparse.ArgumentParser(description='A program to train a neural network \
-    to recognize dynamic gestures. ')
+    to recognize dynamic hand gestures. ')
     parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
 
     args = parser.parse_args()
 
-    C = Config()
+    C = Config(lite=True)
     init_seed(C.seed_val)
 
     ##################
@@ -153,38 +224,36 @@ def main():
     train_x, test_x, train_y, test_y = read_data(C.seed_val)
 
     # Higher order function to pass configuration to format_mediapipe
-    format_vector = partial(format_mediapipe, C)
+    format_shrec = partial(shrec_to_mediapipe, C)
+    format_user = partial(user_to_mediapipe, C)
 
     # Custom transforms to prepare data.
-    transform = transforms.Compose([
+    base_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(normalize),
         transforms.Lambda(resample_and_jitter),
-        transforms.Lambda(format_vector),
     ])
+    shrec_transform = transforms.Compose([transforms.Lambda(format_shrec)])
+    user_transform = transforms.Compose([transforms.Lambda(format_user)])
+    final_transform = [shrec_transform, user_transform]
 
-    if C.batch_with == 'dataloader':
-        train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
-                                  num_workers=10, batch_size=C.dynamic_batch_size,
-                                  collate_fn=variable_length_collate)
-        val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
-                                num_workers=10, batch_size=C.dynamic_batch_size,
-                                collate_fn=variable_length_collate)
-    else:
-        train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
-                                  num_workers=10, batch_size=1)
-        val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
-                                num_workers=10, batch_size=1)
+    train_loader = DataLoader(ShrecDataset(train_x, train_y, base_transform, final_transform),
+                              num_workers=10, batch_size=C.dynamic_batch_size,
+                              collate_fn=choose_collate(variable_length_collate, C))
+    val_loader = DataLoader(ShrecDataset(test_x, test_y, base_transform, final_transform),
+                            num_workers=10, batch_size=C.dynamic_batch_size,
+                            collate_fn=choose_collate(variable_length_collate, C))
 
     ############
     # TRAINING #
     ############
 
-    input_dim = C.dynamic_input_dim
-    output_classes = C.dynamic_output_classes
+    model = ShrecNet(C.dynamic_input_dim, 14)
+    model.load_state_dict(torch.load(C.shrec_path))
 
-    model = ShrecNet(input_dim, output_classes)
-    model.apply(init_weights)
+    # model.apply(init_weights)
+    model.replace_layers(C.dynamic_output_classes)
+
     early_stopping = EarlyStopping(
         patience=3,
         verbose=True,
@@ -198,26 +267,16 @@ def main():
                                           name=args.exp_name,
                                           project='gestures-mediapipe')
 
-    if C.batch_with == 'dataloader':
-        trainer = Trainer(gpus=1,
-                          deterministic=True,
-                          logger=wandb_logger,
-                          min_epochs=C.min_epochs,
-                          early_stop_callback=early_stopping)
-    else:
-        trainer = Trainer(gpus=1,
-                          deterministic=True,
-                          logger=wandb_logger,
-                          min_epochs=C.min_epochs,
-                          accumulate_grad_batches=C.dynamic_batch_size,
-                          early_stop_callback=early_stopping)
+    trainer = Trainer(gpus=1,
+                      deterministic=True,
+                      logger=wandb_logger,
+                      min_epochs=C.min_epochs,
+                      accumulate_grad_batches=C.grad_accum,
+                      early_stop_callback=early_stopping)
 
     trainer.fit(model, train_loader, val_loader)
 
-    PATH = 'models/' + args.exp_name
-    torch.save(model.state_dict(), PATH)
-
-    model.load_state_dict(torch.load(PATH))
+    torch.save(model.state_dict(), C.dynamic_path)
     trainer.test(model, test_dataloaders=val_loader)
 
 
