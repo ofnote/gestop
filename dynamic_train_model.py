@@ -192,6 +192,7 @@ def read_user_data():
     return gesture_arr, target_arr
 
 def read_data(seed_val):
+    ''' Read both user data and SHREC data. '''
     gesture_shrec, target_shrec = read_shrec_data()
     gesture_user, target_user = read_user_data()
 
@@ -209,7 +210,7 @@ def main():
     ''' Main '''
 
     parser = argparse.ArgumentParser(description='A program to train a neural network \
-    to recognize dynamic hand gestures. ')
+    to recognize dynamic hand gestures.')
     parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
 
     args = parser.parse_args()

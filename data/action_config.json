@@ -1,0 +1,18 @@
+{
+    "Grab" : ["py", "take_screenshot", "keyboard"],
+    "Tap" : ["py", "mode_switch", "state"],
+    "Expand" : ["py", "no_func", "none"],
+    "Pinch" : ["py", "no_func", "none"],
+    "Rotation Clockwise" : ["py", "inc_volume", "keyboard"],
+    "Rotation Counter Clockwise" : ["py", "dec_volume", "keyboard"],
+    "Swipe Right" : ["sh", "xdotool set_desktop --relative -- 1"],
+    "Swipe Left" : ["sh", "xdotool set_desktop --relative -- -1"],
+    "Swipe Up" : ["py", "inc_brightness", "keyboard"],
+    "Swipe Down" : ["py", "dec_brightness", "keyboard"],
+    "Swipe X" : ["py", "no_func", "none"],
+    "Swipe +" : ["py", "no_func", "none"],
+    "Swipe V" : ["py", "no_func", "none"],
+    "Shake" : ["py", "no_func", "none"],
+    "Circle" : ["py", "circle_detected", "none"],
+    "bad": ["py", "no_func", "none"]
+}

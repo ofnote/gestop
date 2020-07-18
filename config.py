@@ -22,6 +22,9 @@ class Config:
     # This is useful in scripts which do not use the network, or may modify the network.
     lite: bool
 
+    # Path to action configuration file
+    config_path: str = 'data/action_config.json'
+
     # Seed value for reproducibility
     seed_val: int = 42
 
@@ -32,6 +35,7 @@ class Config:
     # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
     dynamic_input_dim: int = 36
     dynamic_output_classes: int = 15
+    shrec_output_classes: int = 14
 
     # Minimum number of epochs
     min_epochs: int = 15
@@ -40,10 +44,13 @@ class Config:
     dynamic_batch_size: int = 1
 
     # value for pytorch-lighting trainer attribute accumulate_grad_batches
-    grad_accum: int = 8
+    grad_accum: int = 4
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
+
+    # Mapping of gestures to actions
+    gesture_action_mapping: dict = field(default_factory=dict)
 
     static_path: str = 'models/gesture_net'
     shrec_path: str = 'models/shrec_net'
@@ -59,6 +66,9 @@ class Config:
         with open('data/dynamic_gesture_mapping.json', 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)
 
+        with open(self.config_path, 'r') as jsonfile:
+            self.gesture_action_mapping = json.load(jsonfile)
+
         # allow mouse to move to edge of screen, and set interval between calls to 0.01
         pyautogui.FAILSAFE = False
         pyautogui.PAUSE = 0.01
@@ -73,8 +83,8 @@ class Config:
 
             print('Loading ShrecNet..')
 
-            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.dynamic_output_classes)
-            self.shrec_net.load_state_dict(torch.load(self.dynamic_path,
+            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.shrec_output_classes)
+            self.shrec_net.load_state_dict(torch.load(self.shrec_path,
                                                       map_location=self.map_location))
             self.shrec_net.eval()
 
@@ -98,7 +108,7 @@ class State:
 
     # maintain a buffer of most recently detected configs
     static_config_buffer: List = field(default_factory=list)
-    dynamic_config_buffer: List = field(default_factory=list)
+    # dynamic_config_buffer: List = field(default_factory=list)
 
     modes: List = field(default_factory=list)
 
@@ -121,7 +131,7 @@ class State:
         self.prev_pointer = [0, 0]
 
         self.static_config_buffer = ['', '', '', '', '']
-        self.dynamic_config_buffer = ['' for i in range(30)]
+        # self.dynamic_config_buffer = ['' for i in range(30)]
 
         # Modes:
         # Each mode is a different method of interaction with the system.

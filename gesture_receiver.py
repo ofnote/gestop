@@ -33,6 +33,7 @@ def on_release(S, key):
         return False
 
 def start_key_listener(S):
+    ''' Starts the keypress listener. '''
     # Wrapping on_press and on_release into higher order functions
     # to avoid use of global variables
     on_press_key = partial(on_press, S)
@@ -88,15 +89,14 @@ def handle_and_recognize(landmarks, handedness, C, S):
     # Config Action #
     #################
 
-    S = config_action(gesture, S)
-
+    S = config_action(gesture, S, C)
     return S
 
 
 def all_init(args):
     # Initializing the state and the configuration
 
-    C = Config(lite=False)
+    C = Config(lite=False, config_path=args.config_path)
     S = State(start_mode=args.start_mode, mouse_track=args.mouse_track)
 
     start_key_listener(S)
@@ -146,6 +146,8 @@ if __name__ == "__main__":
                         dest="mouse_track", action='store_false')
     parser.add_argument("--start-mode", help="Mode to start the application in",
                         type=str, default="mouse", choices=['mouse', 'gesture'])
+    parser.add_argument("--config-path", help="Path to custom configuration file",
+                        type=str, default="data/action_config.json")
 
     args = parser.parse_args()
 

@@ -3,16 +3,18 @@ Functions which execute an action given a gesture config
 '''
 import subprocess
 import pyautogui
-from pynput.keyboard import Key, KeyCode, Controller
+from pynput.keyboard import Controller
 
-def config_action(config, S):
+import user_config
+
+def config_action(config, S, C):
     '''
     Given a configuration, decides what action to perform.
     '''
     if S.modes[0] == 'mouse':
         return config_static_action(config, S)
     else:
-        return config_dynamic_action(config, S)
+        return config_dynamic_action(config, S, C)
 
 def config_static_action(config, S):
     '''
@@ -54,52 +56,36 @@ def config_static_action(config, S):
     return S
 
 
-def config_dynamic_action(config, S):
+def config_dynamic_action(config, S, C):
     '''
-    Given a configuration, decides what action to perform.
-    Swipe Left/Right -> Switch workspaces (Requires xdotool)
-    Rotation Clockwise/Counter Clockwise -> Increae/decrese volume
-    Swipe Up/Down -> Increase/decrease brightness
-    Tap -> Screenshot
-    Grab -> Mode switch
-    Pinch/Expand -> Zoom in/out
+    Given a gesture, executes the corresponding action.
     '''
-    S.dynamic_config_buffer[S.iter%30] = config  #adding the new config to the buffer
+    arguments = {'keyboard':Controller(),
+                 'none':None,
+                 'state':S}
 
-    # Using pynput's Controller for virtual keyboard input
-    keyboard = Controller()
-
-    if config in ['Shake', 'bad']:
-        pass
-    elif config in ['Swipe Left', 'Swipe Right']:
-        if config == 'Swipe Left':
-            subprocess.run(['xdotool', 'set_desktop', '--relative', '--', '-1'], check=False)
-        if config == 'Swipe Right':
-            subprocess.run(['xdotool', 'set_desktop', '--relative', '--', '1'], check=False)
-    elif config in ['Swipe Up', 'Swipe Down']: # HACK
-        if config == 'Swipe Up':
-            keyboard.press(KeyCode.from_vk(269025026))
-            keyboard.release(KeyCode.from_vk(269025026))
-        else:
-            keyboard.press(KeyCode.from_vk(269025027))
-            keyboard.release(KeyCode.from_vk(269025027))
-    elif config in ['Rotation Clockwise', 'Rotation Counter Clockwise']: # HACK
-        if config == 'Rotation Clockwise':
-            keyboard.press(KeyCode.from_vk(269025043))
-            keyboard.release(KeyCode.from_vk(269025043))
-        else:
-            keyboard.press(KeyCode.from_vk(269025041))
-            keyboard.release(KeyCode.from_vk(269025041))
-    elif config == 'Grab':
-        keyboard.press(Key.print_screen)
-        keyboard.release(Key.print_screen)
-    elif config == 'Tap':
-        # Rotating list to switch modes
-        S.modes = S.modes[-1:] + S.modes[:-1]
-    else:
-        pass
-
-    return S
+    try:
+        action = C.gesture_action_mapping[config]
+    except KeyError:
+        print("The gesture "+ config +" does not have any \
+        action defined. Check the configuration file.")
+        return arguments['state']
+    if action[0] == 'sh':  #shell
+        cmd = action[1].split()
+        subprocess.run(cmd, check=True)
+    else: #python
+        try:
+            method = getattr(user_config, action[1])
+            arg = arguments[action[2]]
+            arguments[action[2]] = method(arg)
+        except AttributeError:
+            print("The method "+action[1]+" does not exist in user_config.py")
+        except KeyError:
+            print("The argument "+action[2]+" is not defined. Available arguments are: "
+                  + arguments.keys() + "\n. For arbitary values to be passed, wrap them in [].")
+        except TypeError:
+            method(action[2])
+    return arguments['state']
 
 def valid_config(config, config_buffer):
     '''
