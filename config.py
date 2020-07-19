@@ -108,7 +108,6 @@ class State:
 
     # maintain a buffer of most recently detected configs
     static_config_buffer: List = field(default_factory=list)
-    # dynamic_config_buffer: List = field(default_factory=list)
 
     modes: List = field(default_factory=list)
 
@@ -131,7 +130,6 @@ class State:
         self.prev_pointer = [0, 0]
 
         self.static_config_buffer = ['', '', '', '', '']
-        # self.dynamic_config_buffer = ['' for i in range(30)]
 
         # Modes:
         # Each mode is a different method of interaction with the system.

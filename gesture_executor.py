@@ -2,7 +2,6 @@
 Functions which execute an action given a gesture config
 '''
 import subprocess
-import pyautogui
 from pynput.keyboard import Controller
 
 import user_config
@@ -12,54 +11,11 @@ def config_action(config, S, C):
     Given a configuration, decides what action to perform.
     '''
     if S.modes[0] == 'mouse':
-        return config_static_action(config, S)
-    else:
-        return config_dynamic_action(config, S, C)
+        valid = valid_config(config, S.static_config_buffer)
+        S.static_config_buffer[S.iter%5] = config
+        if not valid:
+            config = 'bad'
 
-def config_static_action(config, S):
-    '''
-    Given a configuration, decides what action to perform.
-    Modifies an array of flags based on what buttons are clicked
-    bad -> invalid gesture
-    seven -> left mouse down
-    four -> right mouse down
-    eight -> double click
-    spiderman -> scroll
-    hitchhike -> mode switch
-    '''
-    valid = valid_config(config, S.static_config_buffer) #check if valid gesture
-    S.static_config_buffer[S.iter%5] = config  #adding the new config to the buffer
-
-    if config == 'bad' or not valid:
-        pyautogui.mouseUp()
-        S.mouse_flags['mousedown'] = False
-        S.mouse_flags['scroll'] = False
-    elif config == 'hitchhike':
-        # Rotating list
-        S.modes = S.modes[-1:] + S.modes[:-1]
-    elif config == 'fist':
-        S.mouse_track = not(S.mouse_track) # toggle
-    elif config == 'seven':
-        pyautogui.mouseDown()
-        S.mouse_flags['mousedown'] = True
-        S.mouse_flags['scroll'] = False
-    elif config in ['four', 'eight', 'spiderman']:
-        pyautogui.mouseUp()
-        S.mouse_flags['mousedown'] = False
-        if config == 'four':
-            pyautogui.rightClick()
-        elif config == 'eight':
-            pyautogui.doubleClick()
-        else: #spiderman
-            S.mouse_flags['scroll'] = True
-
-    return S
-
-
-def config_dynamic_action(config, S, C):
-    '''
-    Given a gesture, executes the corresponding action.
-    '''
     arguments = {'keyboard':Controller(),
                  'none':None,
                  'state':S}

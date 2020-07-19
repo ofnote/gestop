@@ -123,12 +123,12 @@ def get_dynamic_gesture(landmarks, C, S):
     # |----------+-----------+--------------------------------------------|
 
     if not S.ctrl_flag and not S.prev_flag:
-        return 'bad', S
+        return 'no_detect', S
 
     # Store keypoints in buffer
     S.keypoint_buffer.append(torch.tensor(landmarks))
 
-    gesture = 'bad'
+    gesture = 'no_detect'
     # Refer table above
     if not S.ctrl_flag and S.prev_flag:
         gesture, S = dynamic_gesture_detection(C, S)

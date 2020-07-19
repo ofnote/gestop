@@ -14,5 +14,12 @@
     "Swipe V" : ["py", "no_func", "none"],
     "Shake" : ["py", "no_func", "none"],
     "Circle" : ["py", "circle_detected", "none"],
-    "bad": ["py", "no_func", "none"]
+    "bad": ["py", "reset_mouse", "state"],
+    "hitchhike": ["py", "mode_switch", "state"],
+    "fist": ["py", "disable_mouse_track", "state"],
+    "seven": ["py", "left_mouse_down", "state"],
+    "eight": ["py", "double_click", "state"],
+    "four": ["py", "right_mouse_click", "state"],
+    "spiderman": ["py", "scroll", "state"],
+    "no_detect": ["py", "no_func", "none"]
 }
