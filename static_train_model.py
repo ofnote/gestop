@@ -2,6 +2,7 @@
 Describes the implementation of the training procedure for gesture net
 '''
 import json
+import logging
 import torch
 import pandas as pd
 import numpy as np
@@ -119,7 +120,7 @@ def main():
 
     # Store encoding to disk
     le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
-    print(le_name_mapping)
+    logging.info(le_name_mapping)
     with open('data/static_gesture_mapping.json', 'w') as f:
         f.write(json.dumps(le_name_mapping))
 

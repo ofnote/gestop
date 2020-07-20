@@ -4,6 +4,7 @@ zmq and then writes them to a csv file to create a gesture dataset.
 To be run repeatedly for each gesture
 '''
 
+import logging
 import time
 import zmq
 from proto import landmarkList_pb2
@@ -55,7 +56,7 @@ def main():
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple one word description of the orientation of your hand) :\n")
 
-    print("The script will begin executing in 5 seconds. Make sure your hand is in position.")
+    logging.info("The script will begin executing in 5 seconds. Make sure your hand is in position.")
     time.sleep(5)
 
     # no. of samples added and number of samples being collected
@@ -95,7 +96,7 @@ def main():
     # Writing data to file at once instead of in for loop for performance reasons.
     f.write(DATASET_STR)
     f.close()
-    print("1000 rows of data has been successfully collected.")
+    logging.info("1000 rows of data has been successfully collected.")
 
 
 if __name__ =='__main__':

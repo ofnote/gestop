@@ -6,6 +6,7 @@ Interfaces with the gesture recognizer and the gesture executor modules.
 import threading
 from functools import partial
 import argparse
+import logging
 
 import zmq
 from pynput.keyboard import Listener, Key
@@ -83,7 +84,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
     input_data = format_landmark(landmarks, handedness, C, mode)
     gesture, S = get_gesture(input_data, C, S)
-    print(f'handle_and_recognize: {gesture}')
+    logging.info(f'handle_and_recognize: {gesture}')
 
     #################
     # Config Action #
@@ -152,4 +153,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     handle_zmq_stream(args)
-    print("Shutdown successfully")
+    logging.info("Shutdown successfully")

@@ -1,9 +1,9 @@
 '''
 Functions which execute an action given a gesture config
 '''
+import logging
 import subprocess
 from pynput.keyboard import Controller
-
 import user_config
 
 def config_action(config, S, C):
@@ -23,7 +23,7 @@ def config_action(config, S, C):
     try:
         action = C.gesture_action_mapping[config]
     except KeyError:
-        print("The gesture "+ config +" does not have any \
+        logging.info("The gesture "+ config +" does not have any \
         action defined. Check the configuration file.")
         return arguments['state']
     if action[0] == 'sh':  #shell
@@ -35,9 +35,9 @@ def config_action(config, S, C):
             arg = arguments[action[2]]
             arguments[action[2]] = method(arg)
         except AttributeError:
-            print("The method "+action[1]+" does not exist in user_config.py")
+            logging.info("The method "+action[1]+" does not exist in user_config.py")
         except KeyError:
-            print("The argument "+action[2]+" is not defined. Available arguments are: "
+            logging.info("The argument "+action[2]+" is not defined. Available arguments are: "
                   + arguments.keys() + "\n. For arbitary values to be passed, wrap them in [].")
         except TypeError:
             method(action[2])

@@ -4,11 +4,13 @@ and the 'state' -> values which represent the state of the application
 '''
 import json
 from dataclasses import dataclass, field
+import logging
+from sys import stdout
+import datetime
 from typing import Dict, List
 import pyautogui
 import torch
 from model import GestureNet, ShrecNet
-
 
 @dataclass
 class Config:
@@ -17,6 +19,17 @@ class Config:
         map_location = torch.device('cpu')
     else:
         map_location = None
+
+    # Set up logger
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler("logs/debug{}.log".format(
+                datetime.datetime.now().strftime("%m.%d:%H.%M.%S"))),
+            logging.StreamHandler(stdout)
+        ]
+    )
 
     # If lite is true, then the neural networks are not loaded into the config
     # This is useful in scripts which do not use the network, or may modify the network.
@@ -52,9 +65,9 @@ class Config:
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)
 
-    static_path: str = 'models/gesture_net'
-    shrec_path: str = 'models/shrec_net'
-    dynamic_path: str = 'models/user_net'
+    static_path: str = 'models/gesture_net.pth'
+    shrec_path: str = 'models/shrec_net.pth'
+    dynamic_path: str = 'models/user_net.pth'
 
     gesture_net: GestureNet = field(init=False)
     shrec_net: ShrecNet = field(init=False)
@@ -75,13 +88,13 @@ class Config:
 
         # Setting up networks
         if not self.lite:
-            print('Loading GestureNet...')
+            logging.info('Loading GestureNet...')
             self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes)
             self.gesture_net.load_state_dict(torch.load(self.static_path,
                                                         map_location=self.map_location))
             self.gesture_net.eval()
 
-            print('Loading ShrecNet..')
+            logging.info('Loading ShrecNet..')
 
             self.shrec_net = ShrecNet(self.dynamic_input_dim, self.shrec_output_classes)
             self.shrec_net.load_state_dict(torch.load(self.shrec_path,

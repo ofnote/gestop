@@ -4,6 +4,7 @@ zmq and then writes them to disk to create a gesture dataset.
 To be run repeatedly for each gesture
 '''
 
+import logging
 import os
 import threading
 import zmq
@@ -27,7 +28,7 @@ def main():
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple description of the gesture you will perform) :\n")
 
-    print("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
+    logging.info("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
 
     path = "data/dynamic_gestures/" + gesture
     if not os.path.exists(path):
@@ -62,11 +63,11 @@ def main():
                 with open(fname, 'w') as f:
                     f.write(lmark_str)
 
-                print("Gesture has been successfully recorded in " + fname + \
-                      '. Sequence len:' + str(len(keypoint_buffer)))
+                logging.info("Gesture has been successfully recorded in {0}. Sequence len: {1}".format(
+                    fname, str(len(keypoint_buffer))))
                 count += 1
             else:
-                print("Data was not recorded properly, not written to file.")
+                logging.info("Data was not recorded properly, not written to file.")
             keypoint_buffer = []
 
         if threading.active_count() == 1:
