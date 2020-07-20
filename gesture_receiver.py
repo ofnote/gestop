@@ -110,8 +110,6 @@ def process_data(data, landmark_list, C, S):
 
     S = handle_and_recognize(landmarks, handedness, C, S)
 
-    S.iter += 1
-
 def handle_zmq_stream(args):
     ''' Handles the incoming stream of data from mediapipe. '''
 

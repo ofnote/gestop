@@ -22,7 +22,8 @@ def calc_pointer(landmarks, S):
     resolution = pyautogui.size().width, pyautogui.size().height
     scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
 
-    S.pointer_buffer[S.iter%5] = scaled_pointer
+    S.pointer_buffer.append(scaled_pointer)
+    S.pointer_buffer.pop(0)
     actual_pointer = get_avg_pointer_loc(S.pointer_buffer)
 
     return actual_pointer, S

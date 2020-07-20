@@ -12,7 +12,8 @@ def config_action(config, S, C):
     '''
     if S.modes[0] == 'mouse':
         valid = valid_config(config, S.static_config_buffer)
-        S.static_config_buffer[S.iter%5] = config
+        S.static_config_buffer.append(config)
+        S.static_config_buffer.pop(0)
         if not valid:
             config = 'bad'
 

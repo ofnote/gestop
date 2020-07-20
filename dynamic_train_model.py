@@ -249,7 +249,7 @@ def main():
     # TRAINING #
     ############
 
-    model = ShrecNet(C.dynamic_input_dim, 14)
+    model = ShrecNet(C.dynamic_input_dim, C.dynamic_output_classes, C.dynamic_gesture_mapping)
     model.load_state_dict(torch.load(C.shrec_path))
 
     # model.apply(init_weights)

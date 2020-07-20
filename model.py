@@ -87,7 +87,7 @@ class ShrecNet(LightningModule):
     given a sequence of keypoints. Consists of a bidirectional GRU connected
     to a fully conncted layer.
     '''
-    def __init__(self, input_dim, output_classes):
+    def __init__(self, input_dim, output_classes, gesture_mapping):
         super(ShrecNet, self).__init__()
 
         self.hidden_dim = 128
@@ -98,6 +98,7 @@ class ShrecNet(LightningModule):
 
         self.time = time.time()
         self.epoch_time = []
+        self.gesture_mapping = gesture_mapping
 
     def replace_layers(self, new_output_classes):
         ''' Replacing last layer to learn with new gestures. '''
@@ -168,9 +169,7 @@ class ShrecNet(LightningModule):
         test_pred = torch.cat([x['test_pred'] for x in outputs]).cpu().numpy()
         test_actual = torch.cat([x['test_actual'] for x in outputs]).cpu().numpy()
 
-        labels = ['Grab', 'Tap', 'Expand', 'Pinch', 'RClockwise', 'RCounterclockwise',
-                  'Swipe Right', 'Swipe Left', 'Swipe Up', 'Swipe Down', 'Swipe x', 'Swipe +',
-                  'Swipe V', 'Shake', 'Circle']
+        labels = list(self.gesture_mapping.values())
 
         report = classification_report(test_actual, test_pred,
                                        target_names=labels, output_dict=True)

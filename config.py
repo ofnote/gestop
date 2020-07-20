@@ -96,7 +96,8 @@ class Config:
 
             logging.info('Loading ShrecNet..')
 
-            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.shrec_output_classes)
+            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.shrec_output_classes,
+                                      self.dynamic_gesture_mapping)
             self.shrec_net.load_state_dict(torch.load(self.shrec_path,
                                                       map_location=self.map_location))
             self.shrec_net.eval()
@@ -123,9 +124,6 @@ class State:
     static_config_buffer: List = field(default_factory=list)
 
     modes: List = field(default_factory=list)
-
-    #number of iterations
-    iter: int = 0
 
     # maintain a buffer of keypoints for dynamic gestures
     keypoint_buffer: List = field(default_factory=list)
