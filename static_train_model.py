@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning import loggers as pl_loggers
 from model import GestureNet, GestureDataset
 from config import Config
 
@@ -138,14 +139,18 @@ def main():
         verbose=True,
     )
 
+    wandb_logger = pl_loggers.WandbLogger(save_dir='logs/',
+                                          name='gesture_net',
+                                          project='gestures-mediapipe')
+
     trainer = Trainer(gpus=1,
                       deterministic=True,
-                      default_root_dir='logs',
+                      logger=wandb_logger,
                       min_epochs=C.min_epochs,
                       early_stop_callback=early_stopping)
     trainer.fit(gesture_net, train_loader, test_loader)
     # gesture_net.load_state_dict(torch.load(PATH))
-    # trainer.test(gesture_net, test_dataloaders=test_loader)
+    trainer.test(gesture_net, test_dataloaders=test_loader)
 
     ################
     # SAVING MODEL #
