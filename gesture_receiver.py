@@ -66,9 +66,10 @@ def handle_and_recognize(landmarks, handedness, C, S):
     2. A gesture is recognized, either static or dynamic
     3. The action corresponding to that gesture is executed.
     '''
-    mode = S.modes[0] #current mode
+    # mode = S.modes[0] #current mode
 
-    if mode == 'mouse' and S.mouse_track:
+    # if S.curr_mode == 'mouse' and S.mouse_track:
+    if S.mouse_track and not S.ctrl_flag:
         ##################
         # Mouse Tracking #
         ##################
@@ -76,13 +77,13 @@ def handle_and_recognize(landmarks, handedness, C, S):
         # get pointer location
         mouse_pointer, S = calc_pointer(landmarks, S)
         # control the mouse
-        S = mouse_track(mouse_pointer, S)
+        S = mouse_track(mouse_pointer, S, C.mouse)
 
     ####################
     # Config Detection #
     ####################
 
-    input_data = format_landmark(landmarks, handedness, C, mode)
+    input_data = format_landmark(landmarks, handedness, C, S.ctrl_flag, S.prev_flag)
     gesture, S = get_gesture(input_data, C, S)
     logging.info(f'handle_and_recognize: {gesture}')
 

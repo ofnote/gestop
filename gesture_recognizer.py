@@ -6,12 +6,12 @@ given a set of keypoints.
 import numpy as np
 import torch
 
-def format_landmark(landmark, hand, C, mode):
+def format_landmark(landmark, hand, C, ctrl_flag, prev_flag):
     ''' A wrapper over format_static_landmark and format_dynamic_landmark. '''
-    if mode == 'mouse':
-        return format_static_landmark(landmark, hand, C.static_input_dim)
-    else:
+    if ctrl_flag or prev_flag:
         return format_dynamic_landmark(landmark, C.dynamic_input_dim)
+    else:
+        return format_static_landmark(landmark, hand, C.static_input_dim)
 
 def format_static_landmark(landmark, hand, input_dim):
     '''
@@ -83,10 +83,10 @@ def format_dynamic_landmark(landmark, input_dim):
 
 def get_gesture(landmarks, C, S):
     ''' A wrapper over get_static_gesture and get_dynamic_gesture. '''
-    if S.modes[0] == 'mouse':
-        return get_static_gesture(landmarks, C), S
-    else:
+    if S.ctrl_flag or S.prev_flag:
         return get_dynamic_gesture(landmarks, C, S)
+    else:
+        return get_static_gesture(landmarks, C), S
 
 
 def get_static_gesture(landmarks, C):

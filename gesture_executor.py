@@ -4,45 +4,38 @@ Functions which execute an action given a gesture config
 import logging
 import subprocess
 from pynput.keyboard import Controller
-import user_config
 
 def config_action(config, S, C):
     '''
     Given a configuration, decides what action to perform.
     '''
-    if S.modes[0] == 'mouse':
+    if not S.ctrl_flag:
         valid = valid_config(config, S.static_config_buffer)
         S.static_config_buffer.append(config)
         S.static_config_buffer.pop(0)
         if not valid:
             config = 'bad'
 
-    arguments = {'keyboard':Controller(),
-                 'none':None,
-                 'state':S}
+    # arguments = {'keyboard':Controller(),
+    #              'none':None,
+    #              'state':S}
 
     try:
         action = C.gesture_action_mapping[config]
     except KeyError:
         logging.info("The gesture "+ config +" does not have any \
         action defined. Check the configuration file.")
-        return arguments['state']
+        return S
     if action[0] == 'sh':  #shell
         cmd = action[1].split()
         subprocess.run(cmd, check=True)
     else: #python
         try:
-            method = getattr(user_config, action[1])
-            arg = arguments[action[2]]
-            arguments[action[2]] = method(arg)
+            method = getattr(C.user_config, action[1])
+            S = method(S)
         except AttributeError:
             logging.info("The method "+action[1]+" does not exist in user_config.py")
-        except KeyError:
-            logging.info("The argument "+action[2]+" is not defined. Available arguments are: "
-                  + arguments.keys() + "\n. For arbitary values to be passed, wrap them in [].")
-        except TypeError:
-            method(action[2])
-    return arguments['state']
+    return S
 
 def valid_config(config, config_buffer):
     '''

@@ -8,9 +8,10 @@ import logging
 from sys import stdout
 import datetime
 from typing import Dict, List
-import pyautogui
 import torch
+from pynput.mouse import Controller
 from model import GestureNet, ShrecNet
+from user_config import UserConfig
 
 @dataclass
 class Config:
@@ -72,6 +73,12 @@ class Config:
     gesture_net: GestureNet = field(init=False)
     shrec_net: ShrecNet = field(init=False)
 
+    # Mouse tracking
+    mouse: Controller = field(init=False)
+
+    # User configuration
+    user_config: UserConfig = field(init=False)
+
     def __post_init__(self):
         # Fetching gesture mappings
         with open('data/static_gesture_mapping.json', 'r') as jsonfile:
@@ -82,9 +89,8 @@ class Config:
         with open(self.config_path, 'r') as jsonfile:
             self.gesture_action_mapping = json.load(jsonfile)
 
-        # allow mouse to move to edge of screen, and set interval between calls to 0.01
-        pyautogui.FAILSAFE = False
-        pyautogui.PAUSE = 0.01
+        self.mouse = Controller()
+        self.user_config = UserConfig()
 
         # Setting up networks
         if not self.lite:
@@ -113,6 +119,8 @@ class State:
     # the mode in which to start the application
     start_mode: str
 
+    # curr_mode: str
+
     # array of flags for mouse control
     mouse_flags: Dict = field(default_factory=dict)
 
@@ -123,7 +131,7 @@ class State:
     # maintain a buffer of most recently detected configs
     static_config_buffer: List = field(default_factory=list)
 
-    modes: List = field(default_factory=list)
+    # modes: List = field(default_factory=list)
 
     # maintain a buffer of keypoints for dynamic gestures
     keypoint_buffer: List = field(default_factory=list)
@@ -150,7 +158,8 @@ class State:
         #             E.g. left click, right click, scroll
         # 2. Gesture -> Intuitive gesture are performed to do complicated actions, such as switch
         #             worskpace, dim screen brightness etc.
-        if self.start_mode == 'mouse':
-            self.modes = ['mouse', 'gesture']
-        else:
-            self.modes = ['gesture', 'mouse']
+        # self.curr_mode = self.start_mode
+        # if self.start_mode == 'static':
+        #     self.modes = ['static', 'dynamic']
+        # else:
+        #     self.modes = ['dynamic', 'static']
