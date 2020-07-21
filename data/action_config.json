@@ -21,5 +21,5 @@
     "eight": ["py", "double_click"],
     "four": ["py", "right_mouse_click"],
     "spiderman": ["py", "scroll"],
-    "no_detect": ["py", "no_func"]
+    "gesture_in_progress": ["py", "no_func"]
 }

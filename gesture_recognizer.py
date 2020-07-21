@@ -6,6 +6,22 @@ given a set of keypoints.
 import numpy as np
 import torch
 
+# Using the variable ctrl_flag to detect if the ctrl key is set.
+# Flag set by the Listener Thread (see gesture_receiver.py)
+# prev_flag is the value of ctrl_flag in the previous timestep.
+# Dynamic gestures are only detected when the Ctrl key is released,
+# i.e. ctrl_flag is True and prev_flag is False.
+
+# |----------------------------------------------------------------------------------------|
+# |CTRL_FLAG | PREV_FLAG | Comments                                                        |
+# |----------+-----------+-----------------------------------------------------------------|
+# | False    | False     | Ctrl key has not been pressed. Detect static gesture.           |
+# | True     | False     | Just been pressed. Start storing keypoints for dynamic gesture. |
+# | True     | True      | Continuing capturing keypoints for dynamic gesture.             |
+# | False    | True      | Key has been released. Time to detect dynamic gesture.          |
+# |----------+-----------+-----------------------------------------------------------------|
+
+
 def format_landmark(landmark, hand, C, ctrl_flag, prev_flag):
     ''' A wrapper over format_static_landmark and format_dynamic_landmark. '''
     if ctrl_flag or prev_flag:
@@ -107,28 +123,14 @@ def get_static_gesture(landmarks, C):
 def get_dynamic_gesture(landmarks, C, S):
     '''
     Detects a dynamic gesture using ShrecNet. Takes in a sequence of
-    `DYNAMIC_BUFFER_LENGTH` keypoints and classifies it.
+    keypoints and classifies it.
     '''
-    # Using the variable CTRL_FLAG to detect if the ctrl key is set.
-    # Flag set by the Listener Thread (see gesture_receiver.py)
-    # Detection only occurs when the Ctrl key is released.
-
-    # |-------------------------------------------------------------------|
-    # |CTRL_FLAG | PREV_FLAG | Comments                                   |
-    # |----------+-----------+--------------------------------------------|
-    # | False    | False     | Ctrl key has not been pressed.             |
-    # | True     | False     | Just been pressed. Start storing keypoints.|
-    # | True     | True      | Continuing capturing keypoints.            |
-    # | False    | True      | Key has been released. Time to detect.     |
-    # |----------+-----------+--------------------------------------------|
-
-    if not S.ctrl_flag and not S.prev_flag:
-        return 'no_detect', S
 
     # Store keypoints in buffer
     S.keypoint_buffer.append(torch.tensor(landmarks))
 
-    gesture = 'no_detect'
+    gesture = 'gesture_in_progress'
+
     # Refer table above
     if not S.ctrl_flag and S.prev_flag:
         gesture, S = dynamic_gesture_detection(C, S)

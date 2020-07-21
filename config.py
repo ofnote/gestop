@@ -116,11 +116,6 @@ class State:
     # flag that indicates whether mouse is tracked.
     mouse_track: bool
 
-    # the mode in which to start the application
-    start_mode: str
-
-    # curr_mode: str
-
     # array of flags for mouse control
     mouse_flags: Dict = field(default_factory=dict)
 
@@ -128,10 +123,8 @@ class State:
     pointer_buffer: List = field(default_factory=list)
     prev_pointer: List = field(default_factory=list)
 
-    # maintain a buffer of most recently detected configs
-    static_config_buffer: List = field(default_factory=list)
-
-    # modes: List = field(default_factory=list)
+    # maintain a buffer of most recently detected poses
+    static_pose_buffer: List = field(default_factory=list)
 
     # maintain a buffer of keypoints for dynamic gestures
     keypoint_buffer: List = field(default_factory=list)
@@ -148,18 +141,4 @@ class State:
         self.pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
         self.prev_pointer = [0, 0]
 
-        self.static_config_buffer = ['', '', '', '', '']
-
-        # Modes:
-        # Each mode is a different method of interaction with the system.
-        # Any given functionality might require the use of multiple modes
-        # The first index represents the current mode. When mode is switched, the list is cycled.
-        # 1. Mouse -> In mouse mode, we interact with the system in all the ways that a mouse can.
-        #             E.g. left click, right click, scroll
-        # 2. Gesture -> Intuitive gesture are performed to do complicated actions, such as switch
-        #             worskpace, dim screen brightness etc.
-        # self.curr_mode = self.start_mode
-        # if self.start_mode == 'static':
-        #     self.modes = ['static', 'dynamic']
-        # else:
-        #     self.modes = ['dynamic', 'static']
+        self.static_pose_buffer = ['', '', '', '', '']

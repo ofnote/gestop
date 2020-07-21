@@ -15,7 +15,7 @@ from proto import landmarkList_pb2
 from config import Config, State
 from mouse_tracker import mouse_track, calc_pointer
 from gesture_recognizer import format_landmark, get_gesture
-from gesture_executor import config_action
+from gesture_executor import pose_action
 
 
 def on_press(S, key):
@@ -52,9 +52,7 @@ def get_landmarks(data, landmark_list):
     landmarks = []
     for lmark in landmark_list.landmark:
         landmark = ({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
-        #print(landmark)
         landmarks.append(landmark)
-    #print(landmarks)
 
     return landmarks, landmark_list.handedness
 
@@ -62,13 +60,13 @@ def get_landmarks(data, landmark_list):
 def handle_and_recognize(landmarks, handedness, C, S):
     '''
     Given the keypoints from mediapipe:
-    1. The mouse is tracked if the current mode is 'mouse'
+    1. The mouse is tracked.
     2. A gesture is recognized, either static or dynamic
     3. The action corresponding to that gesture is executed.
     '''
-    # mode = S.modes[0] #current mode
 
-    # if S.curr_mode == 'mouse' and S.mouse_track:
+    # For mouse tracking to occur, mouse tracking should be enabled
+    # and the Ctrl key must not be pressed.
     if S.mouse_track and not S.ctrl_flag:
         ##################
         # Mouse Tracking #
@@ -80,7 +78,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
         S = mouse_track(mouse_pointer, S, C.mouse)
 
     ####################
-    # Config Detection #
+    # Pose Detection #
     ####################
 
     input_data = format_landmark(landmarks, handedness, C, S.ctrl_flag, S.prev_flag)
@@ -88,18 +86,18 @@ def handle_and_recognize(landmarks, handedness, C, S):
     logging.info(f'handle_and_recognize: {gesture}')
 
     #################
-    # Config Action #
+    # Pose Action #
     #################
 
-    S = config_action(gesture, S, C)
+    S = pose_action(gesture, S, C)
     return S
 
 
 def all_init(args):
-    # Initializing the state and the configuration
+    ''' Initializing the state and the configuration. '''
 
     C = Config(lite=False, config_path=args.config_path)
-    S = State(start_mode=args.start_mode, mouse_track=args.mouse_track)
+    S = State(mouse_track=args.mouse_track)
 
     start_key_listener(S)
     landmark_list = landmarkList_pb2.LandmarkList()
@@ -144,8 +142,6 @@ if __name__ == "__main__":
     desktop through hand gestures.')
     parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
                         dest="mouse_track", action='store_false')
-    parser.add_argument("--start-mode", help="Mode to start the application in",
-                        type=str, default="mouse", choices=['mouse', 'gesture'])
     parser.add_argument("--config-path", help="Path to custom configuration file",
                         type=str, default="data/action_config.json")
 
