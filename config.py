@@ -5,13 +5,32 @@ and the 'state' -> values which represent the state of the application
 import json
 from dataclasses import dataclass, field
 import logging
-from sys import stdout
+from sys import stdout, platform
+import os
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import torch
 from pynput.mouse import Controller
 from model import GestureNet, ShrecNet
 from user_config import UserConfig
+
+def get_screen_resolution():
+    ''' OS independent way of getting screen resolution. Adapted from pyautogui. '''
+    if platform == 'linux':
+        from Xlib.display import Display
+
+        _display = Display(os.environ['DISPLAY'])
+        return (_display.screen().width_in_pixels, _display.screen().height_in_pixels)
+    elif platform == 'darwin':
+        try:
+            import Quartz
+        except:
+            assert False, "You must first install pyobjc-core and pyobjc"
+        return (Quartz.CGDisplayPixelsWide(Quartz.CGMainDisplayID()),
+                Quartz.CGDisplayPixelsHigh(Quartz.CGMainDisplayID()))
+    elif platform == 'win32':
+        import ctypes
+        return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
 @dataclass
 class Config:
@@ -62,6 +81,9 @@ class Config:
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
+
+    # Screen Resolution
+    resolution: Tuple = get_screen_resolution()
 
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)

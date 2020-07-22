@@ -2,7 +2,6 @@
 Functions which implement code to track the mouse,
 given a set of landmarks.
 '''
-import pyautogui
 
 def get_avg_pointer_loc(pointer_buffer):
     '''Gets average of previous 5 pointer locations'''
@@ -11,14 +10,12 @@ def get_avg_pointer_loc(pointer_buffer):
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
 
-def calc_pointer(landmarks, S):
+def calc_pointer(landmarks, S, resolution):
     ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
 
     # The tip of the index pointer is the eighth landmark in the list
     index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
 
-    # Screen resolution
-    resolution = pyautogui.size().width, pyautogui.size().height
     scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
 
     S.pointer_buffer.append(scaled_pointer)

@@ -73,7 +73,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
         ##################
 
         # get pointer location
-        mouse_pointer, S = calc_pointer(landmarks, S)
+        mouse_pointer, S = calc_pointer(landmarks, S, C.resolution)
         # control the mouse
         S = mouse_track(mouse_pointer, S, C.mouse)
 
