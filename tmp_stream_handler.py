@@ -33,7 +33,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def setup(self):
         self.landmark_list = landmarkList_pb2.LandmarkList()
-        self.C, self.S, landmark_list = all_init()
+        cmd_args = parse_args()
+        self.C, self.S, landmark_list = all_init(cmd_args)
 
 
     def handle_data(self, data):
@@ -50,8 +51,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         print("{} wrote:".format(self.client_address[0]))
         count_empty = 0
         while True:
-            msg_len = self.request.recv(4)
-            msg_len = struct.unpack("I", msg_len)
+            try:
+                msg_len = self.request.recv(4)
+                msg_len = struct.unpack("I", msg_len)
+            except:
+                time.sleep(2)
+                continue
+
             #print(msg_len)
             data = self.request.recv(msg_len[0])
             #print(f'--[{len(self.data)}]')
@@ -71,6 +77,23 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             #self.request.sendall(self.data.upper())
 
 
+def parse_args():
+    # Program runs on two threads
+    # 1. Key Listener Thread -> Listens to what keys are being pressed
+    # Dynamic gestures are only recognized if the Ctrl key is pressed
+    # 2. MainThread -> The 'main' thread of execution
+    # Receives, recognizes and executes gestures
+    import argparse
+
+    parser = argparse.ArgumentParser(description='An application to control the \
+    desktop through hand gestures.')
+
+    parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
+                        dest="mouse_track", action='store_false')
+    parser.add_argument("--config-path", help="Path to custom configuration file",
+                        type=str, default="data/action_config.json")
+    args = parser.parse_args()
+    return args
 
 def run_socket_server():
 
