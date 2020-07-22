@@ -83,14 +83,15 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
     input_data = format_landmark(landmarks, handedness, C, S.ctrl_flag, S.prev_flag)
     gesture, S = get_gesture(input_data, C, S)
-    if gesture not in ['bad']:
-        logging.info(f'handle_and_recognize: {gesture}')
 
     #################
     # Pose Action #
     #################
 
-    S = pose_action(gesture, S, C)
+    S, action = pose_action(gesture, S, C)
+
+    if gesture not in ['bad']:
+        logging.info(f'handle_and_recognize: {gesture}:{action}')
     return S
 
 
