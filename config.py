@@ -135,8 +135,10 @@ class Config:
 class State:
     ''' The state of the application. '''
 
-    # flag that indicates whether mouse is tracked.
+    # Glag that indicates whether mouse is tracked.
     mouse_track: bool
+    # Flag to indicate whether actions should be executed
+    exec_action: bool
 
     # array of flags for mouse control
     mouse_flags: Dict = field(default_factory=dict)

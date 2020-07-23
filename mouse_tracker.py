@@ -9,6 +9,9 @@ def get_avg_pointer_loc(pointer_buffer):
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
+def scale_pointer(resolution, index):
+    ''' Scales the normalized index wrt to resolution of the screen. '''
+    return (resolution[0]*index[0]*2 - resolution[0]/2, resolution[1]*index[1]*2 - resolution[1]/2)
 
 def calc_pointer(landmarks, S, resolution):
     ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
@@ -16,7 +19,7 @@ def calc_pointer(landmarks, S, resolution):
     # The tip of the index pointer is the eighth landmark in the list
     index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
 
-    scaled_pointer = resolution[0]*index_pointer[0], resolution[1]*index_pointer[1]
+    scaled_pointer = scale_pointer(resolution, index_pointer)
 
     S.pointer_buffer.append(scaled_pointer)
     S.pointer_buffer.pop(0)

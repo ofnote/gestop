@@ -88,7 +88,9 @@ def handle_and_recognize(landmarks, handedness, C, S):
     # Pose Action #
     #################
 
-    S, action = pose_action(gesture, S, C)
+    action = None
+    if S.exec_action:
+        S, action = pose_action(gesture, S, C)
 
     if gesture not in ['bad']:
         logging.info(f'handle_and_recognize: {gesture}:{action}')
@@ -99,7 +101,7 @@ def all_init(args):
     ''' Initializing the state and the configuration. '''
 
     C = Config(lite=False, config_path=args.config_path)
-    S = State(mouse_track=args.mouse_track)
+    S = State(mouse_track=args.mouse_track, exec_action=args.exec_action)
 
     start_key_listener(S)
     landmark_list = landmarkList_pb2.LandmarkList()
@@ -146,7 +148,8 @@ if __name__ == "__main__":
                         dest="mouse_track", action='store_false')
     parser.add_argument("--config-path", help="Path to custom configuration file",
                         type=str, default="data/action_config.json")
-
+    parser.add_argument("--no-action", help="Disbaled execution of actions. Useful for debugging.",
+                        dest="exec_action", action='store_false')
     args = parser.parse_args()
 
     handle_zmq_stream(args)
