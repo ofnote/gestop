@@ -46,6 +46,7 @@ constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kLandmarksStream[] = "hand_landmarks";
 constexpr char kHandednessStream[] = "handedness";
+constexpr char kPresenceStream[] = "hand_presence_score";
 constexpr char kWindowName[] = "MediaPipe";
 
 DEFINE_string(
@@ -146,6 +147,8 @@ int connect_to_server() {
             graph.AddOutputStreamPoller(kLandmarksStream));
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
             graph.AddOutputStreamPoller(kHandednessStream));
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_presence,
+            graph.AddOutputStreamPoller(kPresenceStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
   #if USE_ZMQ
@@ -199,18 +202,22 @@ int connect_to_server() {
     mediapipe::Packet packet;
     mediapipe::Packet landmark_packet;
     mediapipe::Packet handedness_packet;
+    mediapipe::Packet presence_packet;
     if (!poller.Next(&packet)) break;
     if (!poller_landmark.Next(&landmark_packet)) break;
     if (!poller_handedness.Next(&handedness_packet)) break;
+    if (!poller_presence.Next(&presence_packet)) continue;
     std::unique_ptr<mediapipe::ImageFrame> output_frame;
 
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
     auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
-    //std::cout << output_handedness.classification(0).label() << "\n";
+    auto& hand_presence = presence_packet.Get<float>();
+    //for (const float& presence : hand_presence) {
+    std::cout << hand_presence << "\n";
+    //}
 
     hand_tracking::LandmarkList landmarks;
     landmarks.set_handedness(output_handedness.classification(0).index());
-    //std::cout <<  
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
           //const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
           hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();
