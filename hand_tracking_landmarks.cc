@@ -213,7 +213,6 @@ int connect_to_server() {
     auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
     auto& hand_presence = presence_packet.Get<float>();
     //for (const float& presence : hand_presence) {
-    std::cout << hand_presence << "\n";
     //}
 
     hand_tracking::LandmarkList landmarks;
@@ -230,7 +229,12 @@ int connect_to_server() {
     landmarks.SerializeToString(&output);
     
     #if USE_ZMQ
-      sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
+      if (hand_presence > 0.9){
+        sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
+      }
+      //else {
+      //  std::cout << "Not sent" << hand_presence << "\n";
+      //}
     #else
       send(sock, output.c_str(), output.size(), 0);
     #endif
