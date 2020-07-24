@@ -33,9 +33,9 @@ def get_screen_resolution():
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
 def scale_pointer(resolution, index):
-    ''' Scales the normalized index wrt to resolution of the screen. '''
-    return (resolution[0]*index[0]*1.25 - resolution[0]/8,
-            resolution[1]*index[1]*1.25 - resolution[1]/8)
+    ''' Scales the coordinate of the index finger wrt to resolution of the screen. '''
+    return (resolution[0]*index[0]*1.25 - resolution[0]*0.16,
+            resolution[1]*index[1]*1.25 - resolution[1]*0.16)
 
 @dataclass
 class Config:
@@ -102,6 +102,10 @@ class Config:
 
     # Mouse tracking
     mouse: Controller = field(init=False)
+    # How much a single scroll action should scroll
+    scroll_unit: int = 10
+    # Pixel threshold for which mouse should not move when left mouse is held down
+    threshold: int = 50
 
     # User configuration
     user_config: UserConfig = field(init=False)

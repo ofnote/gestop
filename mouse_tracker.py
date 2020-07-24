@@ -6,7 +6,7 @@ given a set of landmarks.
 from config import scale_pointer
 
 def get_avg_pointer_loc(pointer_buffer):
-    '''Gets average of previous 5 pointer locations'''
+    '''Calculates average of previous pointer locations'''
     x = [i[0] for i in pointer_buffer]
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
@@ -25,19 +25,18 @@ def calc_pointer(landmarks, S, resolution):
 
     return actual_pointer, S
 
-def mouse_track(current_pointer, S, mouse):
+def mouse_track(current_pointer, S, mouse, threshold, scroll_unit):
     '''
     Performs mouse actions depending on the S.flags that have been set.
     S.prev_pointer is only modified if the mouse is up and we are not scrolling.
     '''
-    threshold = 50
 
     # If mouse is down and movement below threshold, do not move the mouse
     if S.mouse_flags['mousedown'] and (abs(current_pointer[0] - S.prev_pointer[0]) +
                                        abs(current_pointer[1] - S.prev_pointer[1]) < threshold):
         pass
     elif S.mouse_flags['scroll']:
-        amt_to_scroll = (current_pointer[1] - S.prev_pointer[1])/10
+        amt_to_scroll = (current_pointer[1] - S.prev_pointer[1])/scroll_unit
         mouse.scroll(0, amt_to_scroll)
     else:
         mouse.position = current_pointer
