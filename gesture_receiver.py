@@ -88,12 +88,11 @@ def handle_and_recognize(landmarks, handedness, C, S):
     # Pose Action #
     #################
 
-    action = None
     if S.exec_action:
-        S, action = pose_action(gesture, S, C)
+        S = pose_action(gesture, S, C)
 
     if gesture not in ['bad']:
-        logging.info(f'handle_and_recognize: {gesture}:{action}')
+        logging.info(f'handle_and_recognize: {gesture}:{S.action}')
     return S
 
 

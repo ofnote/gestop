@@ -30,7 +30,8 @@ def pose_action(pose, S, C):
             S = method(S)
         except AttributeError:
             logging.info("The method "+action[1]+" does not exist in user_config.py")
-    return S, action[1]
+    S.action = action[1]
+    return S
 
 def valid_pose(pose, pose_buffer):
     '''

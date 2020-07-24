@@ -32,6 +32,11 @@ def get_screen_resolution():
         import ctypes
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
+def scale_pointer(resolution, index):
+    ''' Scales the normalized index wrt to resolution of the screen. '''
+    return (resolution[0]*index[0]*1.25 - resolution[0]/8,
+            resolution[1]*index[1]*1.25 - resolution[1]/8)
+
 @dataclass
 class Config:
     ''' The configuration of the application. '''
@@ -158,11 +163,14 @@ class State:
     # ctrl_flag of the previous timestep. Used to detect change
     prev_flag: bool = False
 
+    # Last executed action
+    action: str = ''
+
     def __post_init__(self):
 
         self.mouse_flags = {'mousedown': False, 'scroll': False}
 
-        self.pointer_buffer = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
+        self.pointer_buffer = [(0, 0) for i in range(5)]
         self.prev_pointer = [0, 0]
 
         self.static_pose_buffer = ['', '', '', '', '']

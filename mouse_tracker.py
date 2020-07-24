@@ -3,15 +3,13 @@ Functions which implement code to track the mouse,
 given a set of landmarks.
 '''
 
+from config import scale_pointer
+
 def get_avg_pointer_loc(pointer_buffer):
     '''Gets average of previous 5 pointer locations'''
     x = [i[0] for i in pointer_buffer]
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
-
-def scale_pointer(resolution, index):
-    ''' Scales the normalized index wrt to resolution of the screen. '''
-    return (resolution[0]*index[0]*2 - resolution[0]/2, resolution[1]*index[1]*2 - resolution[1]/2)
 
 def calc_pointer(landmarks, S, resolution):
     ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
@@ -27,13 +25,12 @@ def calc_pointer(landmarks, S, resolution):
 
     return actual_pointer, S
 
-
 def mouse_track(current_pointer, S, mouse):
     '''
     Performs mouse actions depending on the S.flags that have been set.
     S.prev_pointer is only modified if the mouse is up and we are not scrolling.
     '''
-    threshold = 100
+    threshold = 50
 
     # If mouse is down and movement below threshold, do not move the mouse
     if S.mouse_flags['mousedown'] and (abs(current_pointer[0] - S.prev_pointer[0]) +
