@@ -99,8 +99,6 @@ class Config:
     mouse: Controller = field(init=False)
     # How much a single scroll action should scroll
     scroll_unit: int = 10
-    # Pixel threshold for which mouse should not move when left mouse is held down
-    threshold: int = 50
 
     # Specifying how to map webcam coordinates to the monitor coordinates.
     # Format - [x1,y1,x2,y2] where (x1,y1) specifies which coordinate to map to

@@ -75,7 +75,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
         # get pointer location
         mouse_pointer, S = calc_pointer(landmarks, S, C.resolution, C.map_coord)
         # control the mouse
-        S = mouse_track(mouse_pointer, S, C.mouse, C.threshold, C.scroll_unit)
+        S = mouse_track(mouse_pointer, S, C.mouse, C.scroll_unit)
 
     ####################
     # Pose Detection #
