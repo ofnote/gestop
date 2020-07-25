@@ -157,8 +157,8 @@ class State:
     pointer_buffer: List = field(default_factory=list)
     prev_pointer: List = field(default_factory=list)
 
-    # maintain a buffer of most recently detected poses
-    static_pose_buffer: List = field(default_factory=list)
+    # maintain a buffer of most recently executed actions
+    static_action_buffer: List = field(default_factory=list)
 
     # maintain a buffer of keypoints for dynamic gestures
     keypoint_buffer: List = field(default_factory=list)
@@ -178,4 +178,4 @@ class State:
         self.pointer_buffer = [(0, 0) for i in range(5)]
         self.prev_pointer = [0, 0]
 
-        self.static_pose_buffer = ['', '', '', '', '']
+        self.static_action_buffer = ['', '', '', '', '']

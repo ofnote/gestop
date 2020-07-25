@@ -8,19 +8,20 @@ def pose_action(pose, S, C):
     '''
     Given a pose, decides what action to perform.
     '''
-    if not S.ctrl_flag:
-        valid = valid_pose(pose, S.static_pose_buffer)
-        S.static_pose_buffer.append(pose)
-        S.static_pose_buffer.pop(0)
-        if not valid:
-            pose = 'bad'
-
     try:
         action = C.gesture_action_mapping[pose]
     except KeyError:
         logging.info("The gesture "+ pose +" does not have any \
         action defined. Check the configuration file.")
         return S
+
+    if not S.ctrl_flag:
+        valid = valid_action(action[1], S.static_action_buffer)
+        S.static_action_buffer.append(action[1])
+        S.static_action_buffer.pop(0)
+        if not valid:
+            action = ['py', 'reset_mouse']
+
     if action[0] == 'sh':  #shell
         cmd = action[1].split()
         subprocess.run(cmd, check=True)
@@ -33,14 +34,14 @@ def pose_action(pose, S, C):
     S.action = action[1]
     return S
 
-def valid_pose(pose, pose_buffer):
+def valid_action(action, action_buffer):
     '''
-    Checks whether the gesture performed is in the pose buffer i.e. recently performed.
-    For most gestures, if it is present, then that makes it an invalid gesture.
-    This is to prevent multiple gesture detections in a short span of time.
+    Checks whether the action is in the action buffer i.e. recently executed.
+    For most actions, if it is present, then that makes it invalid.
+    This is to prevent multiple actions in a short span of time.
     '''
-    if pose in ['bad', 'seven', 'spiderman']: # these gestures are always valid, even if repeated
+    if action in ['reset_mouse', 'scroll', 'left_mouse_down']:
         return True
-    if pose in pose_buffer: # repeated gesture
+    if action in action_buffer: # repeated action
         return False
     return True

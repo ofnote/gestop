@@ -17,8 +17,8 @@
     "bad": ["py", "reset_mouse"],
     "hitchhike": ["py", "reset_mouse"],
     "fist": ["py", "disable_mouse_track"],
-    "seven": ["py", "left_mouse_down"],
-    "eight": ["py", "double_click"],
+    "seven": ["py", "left_mouse_click"],
+    "eight": ["py", "left_mouse_down"],
     "four": ["py", "right_mouse_click"],
     "spiderman": ["py", "scroll"],
     "gesture_in_progress": ["py", "no_func"]

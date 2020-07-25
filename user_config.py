@@ -78,11 +78,18 @@ class UserConfig:
         self.mouse.click(Button.left, 2)
         return S
 
-    def right_mouse_click(self,S):
+    def right_mouse_click(self, S):
         ''' Right mouse button click. '''
         S.mouse_flags['mousedown'] = False
         self.mouse.click(Button.right)
         return S
+
+    def left_mouse_click(self, S):
+        ''' Right mouse button click. '''
+        S.mouse_flags['mousedown'] = False
+        self.mouse.click(Button.left)
+        return S
+
 
     def scroll(self, S):
         ''' Locks the mouse and allows scrolling. '''
