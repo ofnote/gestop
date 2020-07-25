@@ -2,22 +2,24 @@
 Functions which implement code to track the mouse,
 given a set of landmarks.
 '''
-
-from config import scale_pointer
-
 def get_avg_pointer_loc(pointer_buffer):
     '''Calculates average of previous pointer locations'''
     x = [i[0] for i in pointer_buffer]
     y = [i[1] for i in pointer_buffer]
     return sum(x)/len(pointer_buffer), sum(y)/len(pointer_buffer)
 
-def calc_pointer(landmarks, S, resolution):
+def scale_pointer(resolution, index, map_coord):
+    ''' Scales the coordinate of the index finger wrt to resolution of the screen. '''
+    return (resolution[0]*((index[0]-map_coord[0])/(map_coord[2]-map_coord[0])),
+            resolution[1]*((index[1]-map_coord[1])/(map_coord[3]-map_coord[1])))
+
+def calc_pointer(landmarks, S, resolution, map_coord):
     ''' Uses the landmarks to calculate the location of the cursor on the screen. '''
 
     # The tip of the index pointer is the eighth landmark in the list
     index_pointer = landmarks[8]['x'], landmarks[8]['y'], landmarks[8]['z']
 
-    scaled_pointer = scale_pointer(resolution, index_pointer)
+    scaled_pointer = scale_pointer(resolution, index_pointer, map_coord)
 
     S.pointer_buffer.append(scaled_pointer)
     S.pointer_buffer.pop(0)

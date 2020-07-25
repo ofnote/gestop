@@ -32,11 +32,6 @@ def get_screen_resolution():
         import ctypes
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
-def scale_pointer(resolution, index):
-    ''' Scales the coordinate of the index finger wrt to resolution of the screen. '''
-    return (resolution[0]*index[0]*1.25 - resolution[0]*0.16,
-            resolution[1]*index[1]*1.25 - resolution[1]*0.16)
-
 @dataclass
 class Config:
     ''' The configuration of the application. '''
@@ -106,6 +101,12 @@ class Config:
     scroll_unit: int = 10
     # Pixel threshold for which mouse should not move when left mouse is held down
     threshold: int = 50
+
+    # Specifying how to map webcam coordinates to the monitor coordinates.
+    # Format - [x1,y1,x2,y2] where (x1,y1) specifies which coordinate to map to
+    # the top left of your screen and (x2,y2) specifies which coordinate to map
+    # to the bottom right of your screen.
+    map_coord = [0.2, 0.2, 0.8, 0.8]
 
     # User configuration
     user_config: UserConfig = field(init=False)
