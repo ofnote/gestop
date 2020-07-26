@@ -76,8 +76,10 @@ class Config:
     static_batch_size: int = 64
     dynamic_batch_size: int = 1
 
+    pretrained: bool = True
+
     # value for pytorch-lighting trainer attribute accumulate_grad_batches
-    grad_accum: int = 4
+    grad_accum: int = 1
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)

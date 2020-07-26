@@ -7,6 +7,7 @@ Trains the network and saves it to disk.
 import os
 import argparse
 from functools import partial
+import json
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -172,7 +173,11 @@ def read_shrec_data():
                     gesture_arr.append(data)
                     target_arr.append(gesture_no)
         gesture_no += 1
-    return gesture_arr, target_arr
+
+    with open('data/shrec_gesture_mapping.json', 'r') as jsonfile:
+        shrec_dict = json.load(jsonfile)
+
+    return gesture_arr, target_arr, shrec_dict
 
 def read_user_data():
     ''' Reads the user collected data. '''
@@ -181,24 +186,31 @@ def read_user_data():
     gesture_arr = []
     target_arr = []
     gesture_no = 14 #no. of gestures in SHREC
+    user_dict = {}
 
     for gesture in os.listdir(base_directory): # for each gesture
         for g in os.listdir(base_directory+'/'+gesture):
             data = np.loadtxt(base_directory+'/'+gesture+'/'+g)
             gesture_arr.append(data)
             target_arr.append(gesture_no)
+        user_dict[gesture_no] = gesture
         gesture_no += 1
 
-    return gesture_arr, target_arr
+    return gesture_arr, target_arr, user_dict
 
 def read_data(seed_val):
     ''' Read both user data and SHREC data. '''
-    gesture_shrec, target_shrec = read_shrec_data()
-    gesture_user, target_user = read_user_data()
+    gesture_shrec, target_shrec, shrec_dict = read_shrec_data()
+    gesture_user, target_user, user_dict = read_user_data()
+
+    user_dict.update(shrec_dict)
 
     gesture = gesture_shrec + gesture_user
     target = target_shrec + target_user
-    return train_test_split(gesture, target, test_size=0.2, random_state=seed_val)
+
+    train_x, test_x, train_y, test_y = train_test_split(gesture, target, test_size=0.2,
+                                                        random_state=seed_val)
+    return train_x, test_x, train_y, test_y, user_dict
 
 def choose_collate(collate_fn, C):
     ''' Returns None(default collate) if batch size is 1, else custom collate. '''
@@ -215,14 +227,16 @@ def main():
 
     args = parser.parse_args()
 
-    C = Config(lite=True)
+    C = Config(lite=True, pretrained=False)
     init_seed(C.seed_val)
 
     ##################
     # INPUT PIPELINE #
     ##################
 
-    train_x, test_x, train_y, test_y = read_data(C.seed_val)
+    train_x, test_x, train_y, test_y, gesture_mapping = read_data(C.seed_val)
+    with open('data/dynamic_gesture_mapping.json', 'w') as f:
+        f.write(json.dumps(gesture_mapping))
 
     # Higher order function to pass configuration to format_mediapipe
     format_shrec = partial(shrec_to_mediapipe, C)
@@ -249,11 +263,14 @@ def main():
     # TRAINING #
     ############
 
-    model = ShrecNet(C.dynamic_input_dim, C.dynamic_output_classes, C.dynamic_gesture_mapping)
-    model.load_state_dict(torch.load(C.shrec_path))
-
-    # model.apply(init_weights)
-    model.replace_layers(C.dynamic_output_classes)
+    # Use pretrained SHREC model
+    if C.pretrained:
+        model = ShrecNet(C.dynamic_input_dim, C.shrec_output_classes, gesture_mapping)
+        model.load_state_dict(torch.load(C.shrec_path))
+        model.replace_layers(C.dynamic_output_classes)
+    else:
+        model = ShrecNet(C.dynamic_input_dim, C.dynamic_output_classes, gesture_mapping)
+        # model.apply(init_weights)
 
     early_stopping = EarlyStopping(
         patience=3,
@@ -278,6 +295,7 @@ def main():
     trainer.fit(model, train_loader, val_loader)
 
     torch.save(model.state_dict(), C.dynamic_path)
+
     trainer.test(model, test_dataloaders=val_loader)
 
 
