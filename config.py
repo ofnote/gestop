@@ -50,6 +50,8 @@ class Config:
             logging.StreamHandler(stdout)
         ]
     )
+    # Disabled to prevent debug output by matplotlib
+    logging.getLogger('matplotlib.font_manager').disabled = True
 
     # If lite is true, then the neural networks are not loaded into the config
     # This is useful in scripts which do not use the network, or may modify the network.

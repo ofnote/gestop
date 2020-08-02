@@ -6,8 +6,6 @@ ShrecNet -> A GRU network which classifies dynamic gestures with data from SHREC
 '''
 
 import time
-import logging
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -175,7 +173,7 @@ class ShrecNet(LightningModule):
                                        target_names=labels, output_dict=True)
         # String representation for easy vieweing
         str_report = classification_report(test_actual, test_pred, target_names=labels)
-        logging.info(str_report)
+        print(str_report)
 
         # Format the report
         report.pop('accuracy')

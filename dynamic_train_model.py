@@ -276,7 +276,7 @@ def main():
         # model.apply(init_weights)
 
     early_stopping = EarlyStopping(
-        patience=3,
+        patience=10,
         verbose=True,
     )
 
@@ -291,7 +291,7 @@ def main():
     trainer = Trainer(gpus=1,
                       deterministic=True,
                       logger=wandb_logger,
-                      min_epochs=C.min_epochs,
+                      min_epochs=75,
                       accumulate_grad_batches=C.grad_accum,
                       early_stop_callback=early_stopping)
 
