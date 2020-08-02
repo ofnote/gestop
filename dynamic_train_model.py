@@ -6,6 +6,7 @@ Trains the network and saves it to disk.
 
 import os
 import argparse
+import math
 from functools import partial
 import json
 import numpy as np
@@ -80,11 +81,13 @@ def shrec_to_mediapipe(C, seq):
         new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
         # new_seq[i] = torch.zeros(34)
         if i == 0: # start of sequence
-            new_seq[i][2] = iseq[0]
-            new_seq[i][3] = iseq[1]
-        else:  # change in postiion
-            new_seq[i][2] = iseq[0] - new_seq[i-1][0]
-            new_seq[i][3] = iseq[1] - new_seq[i-1][1]
+            new_seq[i][2] = 0
+            new_seq[i][3] = 0
+        else:  # change in postiion in polar coordinates
+            x = iseq[0] - new_seq[i-1][0]
+            y = iseq[1] - new_seq[i-1][1]
+            new_seq[i][2] = (x**2 + y**2)**0.5 # magnitude
+            new_seq[i][3] = math.atan2(y, x)/math.pi
 
         # Making a new sequence without the Palm keypoint for ease of calculation
         mediapipe_seq = torch.cat([iseq[0:2], iseq[4:]])
@@ -203,14 +206,14 @@ def read_data(seed_val):
     gesture_shrec, target_shrec, shrec_dict = read_shrec_data()
     gesture_user, target_user, user_dict = read_user_data()
 
-    user_dict.update(shrec_dict)
+    shrec_dict.update(user_dict)
 
     gesture = gesture_shrec + gesture_user
     target = target_shrec + target_user
 
     train_x, test_x, train_y, test_y = train_test_split(gesture, target, test_size=0.2,
                                                         random_state=seed_val)
-    return train_x, test_x, train_y, test_y, user_dict
+    return train_x, test_x, train_y, test_y, shrec_dict
 
 def choose_collate(collate_fn, C):
     ''' Returns None(default collate) if batch size is 1, else custom collate. '''

@@ -81,7 +81,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
     # Pose Detection #
     ####################
 
-    input_data = format_landmark(landmarks, handedness, C, S.ctrl_flag, S.prev_flag)
+    input_data = format_landmark(landmarks, handedness, C, S)
     gesture, S = get_gesture(input_data, C, S)
 
     #################

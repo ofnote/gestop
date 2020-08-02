@@ -2,7 +2,7 @@
 Functionality to recognize a static/dynamic gesture,
 given a set of keypoints.
 '''
-
+import math
 import numpy as np
 import torch
 
@@ -22,10 +22,10 @@ import torch
 # |----------+-----------+-----------------------------------------------------------------|
 
 
-def format_landmark(landmark, hand, C, ctrl_flag, prev_flag):
+def format_landmark(landmark, hand, C, S):
     ''' A wrapper over format_static_landmark and format_dynamic_landmark. '''
-    if ctrl_flag or prev_flag:
-        return format_dynamic_landmark(landmark, C.dynamic_input_dim)
+    if S.ctrl_flag or S.prev_flag:
+        return format_dynamic_landmark(landmark, C.dynamic_input_dim, S)
     else:
         return format_static_landmark(landmark, hand, C.static_input_dim)
 
@@ -61,7 +61,7 @@ def format_static_landmark(landmark, hand, input_dim):
     return formatted_landmark
 
 
-def format_dynamic_landmark(landmark, input_dim):
+def format_dynamic_landmark(landmark, input_dim, S):
     '''
     Formats the input keypoints into the format expected by ShrecNet.
     Refer format_mediapipe in dynamic_train_model.py for format details.
@@ -71,28 +71,39 @@ def format_dynamic_landmark(landmark, input_dim):
     formatted_landmark[0] = landmark[0]['x']
     formatted_landmark[1] = landmark[0]['y']
 
+    if S.prev_landmark is None: # start of sequence
+        formatted_landmark[2] = 0
+        formatted_landmark[3] = 0
+    else:  # change in postiion in polar coordinates
+        x = formatted_landmark[0] - S.prev_landmark[0]
+        y = formatted_landmark[1] - S.prev_landmark[1]
+        formatted_landmark[2] = (x**2 + y**2)**0.5 # magnitude
+        formatted_landmark[3] = math.atan2(y, x)/math.pi
+
     # Relative
     for i in range(4):
         # calculate L01, L12, L23, L34
-        formatted_landmark[2+2*i] = landmark[i+1]['x'] - landmark[i]['x'] #L__X
-        formatted_landmark[2+2*i+1] = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
+        formatted_landmark[4+2*i] = landmark[i+1]['x'] - landmark[i]['x'] #L__X
+        formatted_landmark[4+2*i+1] = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
 
     for i in range(3):
         # calculate L56, L67, L78
-        formatted_landmark[10+2*i] = landmark[i+6]['x'] - landmark[i+5]['x']
-        formatted_landmark[10+2*i+1] = landmark[i+6]['y'] - landmark[i+5]['y']
+        formatted_landmark[12+2*i] = landmark[i+6]['x'] - landmark[i+5]['x']
+        formatted_landmark[12+2*i+1] = landmark[i+6]['y'] - landmark[i+5]['y']
 
         # calculate L910, L1011, L1112
-        formatted_landmark[16+2*i] = landmark[i+10]['x'] - landmark[i+9]['x']
-        formatted_landmark[16+2*i+1] = landmark[i+10]['y'] - landmark[i+9]['y']
+        formatted_landmark[18+2*i] = landmark[i+10]['x'] - landmark[i+9]['x']
+        formatted_landmark[18+2*i+1] = landmark[i+10]['y'] - landmark[i+9]['y']
 
         # calculate L1314, L1415, L1516
-        formatted_landmark[22+2*i] = landmark[i+14]['x'] - landmark[i+13]['x']
-        formatted_landmark[22+2*i+1] = landmark[i+14]['y'] - landmark[i+13]['y']
+        formatted_landmark[24+2*i] = landmark[i+14]['x'] - landmark[i+13]['x']
+        formatted_landmark[24+2*i+1] = landmark[i+14]['y'] - landmark[i+13]['y']
 
         # calculate L1718, L1819, L1920
-        formatted_landmark[28+2*i] = landmark[i+18]['x'] - landmark[i+17]['x']
-        formatted_landmark[28+2*i+1] = landmark[i+18]['y'] - landmark[i+17]['y']
+        formatted_landmark[30+2*i] = landmark[i+18]['x'] - landmark[i+17]['x']
+        formatted_landmark[30+2*i+1] = landmark[i+18]['y'] - landmark[i+17]['y']
+
+    S.prev_landmark = formatted_landmark
 
     return formatted_landmark
 
@@ -149,5 +160,8 @@ def dynamic_gesture_detection(C, S):
     gesture_dict = dict(zip(C.dynamic_gesture_mapping.values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)
+
+    # Reset prev_landmark for next detection
+    S.prev_landmark = None
 
     return gesture, S

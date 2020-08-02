@@ -79,7 +79,7 @@ class Config:
     pretrained: bool = True
 
     # value for pytorch-lighting trainer attribute accumulate_grad_batches
-    grad_accum: int = 1
+    grad_accum: int = 2
 
     static_gesture_mapping: dict = field(default_factory=dict)
     dynamic_gesture_mapping: dict = field(default_factory=dict)
@@ -134,12 +134,11 @@ class Config:
 
             logging.info('Loading ShrecNet..')
 
-            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.shrec_output_classes,
+            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.dynamic_output_classes,
                                       self.dynamic_gesture_mapping)
-            self.shrec_net.load_state_dict(torch.load(self.shrec_path,
+            self.shrec_net.load_state_dict(torch.load(self.dynamic_path,
                                                       map_location=self.map_location))
             self.shrec_net.eval()
-
 
 @dataclass
 class State:
@@ -162,6 +161,9 @@ class State:
 
     # maintain a buffer of keypoints for dynamic gestures
     keypoint_buffer: List = field(default_factory=list)
+
+    # Stores the previous landmark in the stream
+    prev_landmark: torch.tensor = None
 
     # Flag to denote whether the Ctrl key is pressed
     ctrl_flag: bool = False
