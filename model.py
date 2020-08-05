@@ -88,11 +88,12 @@ class ShrecNet(LightningModule):
     def __init__(self, input_dim, output_classes, gesture_mapping):
         super(ShrecNet, self).__init__()
 
-        self.hidden_dim = 128
-        self.gru = nn.GRU(input_size=input_dim, hidden_size=self.hidden_dim,
+        self.hidden_dim1 = 128
+        self.hidden_dim2 = 64
+        self.fc1 = nn.Linear(input_dim, self.hidden_dim1)
+        self.gru = nn.GRU(input_size=self.hidden_dim1, hidden_size=self.hidden_dim2,
                           bidirectional=True, batch_first=True)
-        self.fc1 = nn.Linear(self.hidden_dim*2, self.hidden_dim)
-        self.fc2 = nn.Linear(self.hidden_dim, output_classes)
+        self.fc2 = nn.Linear(self.hidden_dim2*2, output_classes)
 
         self.time = time.time()
         self.epoch_time = []
@@ -106,11 +107,12 @@ class ShrecNet(LightningModule):
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
     def forward(self, x):
+        x = F.leaky_relu(self.fc1(x))
         out, h = self.gru(x)
         # out = pad_packed_sequence(out, batch_first=True)[0]
         last_out = out[:, -1]
         last_out = F.leaky_relu(last_out)
-        last_out = F.leaky_relu(self.fc1(last_out))
+        # last_out = F.leaky_relu(self.fc1(last_out))
         last_out = F.leaky_relu(self.fc2(last_out))
         return last_out
 
@@ -220,20 +222,14 @@ class ShrecDataset(Dataset):
     Implementation of a ShrecDataset which stores both SHREC and user data and
     formats it as required by the network during training.
     '''
-    def __init__(self, input_data, target, base_transform, final_transform):
+    def __init__(self, input_data, target, transform):
         self.input_data = input_data
         self.target = target
-        self.base_transform = base_transform
-        self.final_transform = final_transform
+        self.transform = transform
 
     def __len__(self):
         return len(self.input_data)
 
     def __getitem__(self, index):
-        x = self.base_transform(self.input_data[index])
-        l = len(x[0])
-        if l == 63: # user data (21*3=63)
-            x = self.final_transform[1](x)
-        else: # shrec data (22*2=44)
-            x = self.final_transform[0](x)
+        x = self.transform(self.input_data[index])
         return (x, self.target[index])
