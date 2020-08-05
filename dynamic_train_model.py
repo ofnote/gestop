@@ -71,92 +71,78 @@ def resample_and_jitter(seq):
 
     return seq.float()
 
-def shrec_to_mediapipe(C, seq):
+def calc_polar(x,y):
+    return (x**2 + y**2)**0.5, math.atan2(y, x)/math.pi
+
+def format_mediapipe(C, seq):
     '''
     Transformation Function. Formats the normalized keypoints as per mediapipe output.
     '''
-    new_seq = torch.zeros((len(seq), C.dynamic_input_dim))  # 4 absolute + 32 relative
+    if len(seq[0]) == 63: # User collected data
+        seq = reshape_user(seq)
+    else: # SHREC data
+        # Make a new sequence without Palm keypoint
+        tmp_seq = torch.zeros((len(seq),42))
+        for i, iseq in enumerate(seq):
+            tmp_seq[i] = torch.cat([iseq[0:2], iseq[4:]])
+        seq = tmp_seq
+    new_seq = torch.zeros((len(seq),C.dynamic_input_dim))
     for i, iseq in enumerate(seq):
         # Absolute
-        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
-        # new_seq[i] = torch.zeros(34)
-        if i == 0: # start of sequence
+        new_seq[i][0] = iseq[0]
+        new_seq[i][1] = iseq[1]
+
+        if i == 0: #start of sequence
             new_seq[i][2] = 0
             new_seq[i][3] = 0
-        else:  # change in postiion in polar coordinates
-            x = iseq[0] - new_seq[i-1][0]
-            y = iseq[1] - new_seq[i-1][1]
-            new_seq[i][2] = (x**2 + y**2)**0.5 # magnitude
-            new_seq[i][3] = math.atan2(y, x)/math.pi
+        else: # Time diff coordinate
+             x = iseq[0] - new_seq[i-1][0]
+             y = iseq[1] - new_seq[i-1][1]
+             new_seq[i][2], new_seq[i][3] = calc_polar(x, y)
 
-        # Making a new sequence without the Palm keypoint for ease of calculation
-        mediapipe_seq = torch.cat([iseq[0:2], iseq[4:]])
-
-        # Relative
         for j in range(4):
             # calculate L01, L12, L23, L34
-            new_seq[i][4+2*j] = mediapipe_seq[2*j+2] - mediapipe_seq[2*j] #L__X
-            new_seq[i][4+2*j+1] = mediapipe_seq[2*j+3] - mediapipe_seq[2*j+1] #L__Y
+            x = iseq[2*j+2] - iseq[2*j] #L__X
+            y = iseq[2*j+3] - iseq[2*j+1] #L__Y
+            new_seq[i][4+2*j], new_seq[i][4+2*j+1] = x, y
+            # new_seq[i][4+2*j], new_seq[i][4+2*j+1] = calc_polar(x, y)
 
         for j in range(3):
             # calculate L56, L67, L78
-            new_seq[i][12+2*j] = mediapipe_seq[2*j+12] - mediapipe_seq[2*j+10]
-            new_seq[i][12+2*j+1] = mediapipe_seq[2*j+13] - mediapipe_seq[2*j+11]
+            x = iseq[2*j+12] - iseq[2*j+10]
+            y = iseq[2*j+13] - iseq[2*j+11]
+            new_seq[i][12+2*j], new_seq[i][12+2*j+1] = x, y
 
             # calculate L910, L1011, L1112
-            new_seq[i][18+2*j] = mediapipe_seq[2*j+20] - mediapipe_seq[2*j+18]
-            new_seq[i][18+2*j+1] = mediapipe_seq[2*j+21] - mediapipe_seq[2*j+19]
+            x = iseq[2*j+20] - iseq[2*j+18]
+            y = iseq[2*j+21] - iseq[2*j+19]
+            new_seq[i][18+2*j], new_seq[i][18+2*j+1] = x, y
 
             # calculate L1314, L1415, L1516
-            new_seq[i][24+2*j] = mediapipe_seq[2*j+28] - mediapipe_seq[2*j+26]
-            new_seq[i][24+2*j+1] = mediapipe_seq[2*j+29] - mediapipe_seq[2*j+27]
+            x = iseq[2*j+28] - iseq[2*j+26]
+            y = iseq[2*j+29] - iseq[2*j+27]
+            new_seq[i][24+2*j], new_seq[i][24+2*j+1] = x, y
 
             # calculate L1718, L1819, L1920
-            new_seq[i][30+2*j] = mediapipe_seq[2*j+36] - mediapipe_seq[2*j+34]
-            new_seq[i][30+2*j+1] = mediapipe_seq[2*j+37] - mediapipe_seq[2*j+35]
+            x = iseq[2*j+36] - iseq[2*j+34]
+            y = iseq[2*j+37] - iseq[2*j+35]
+            new_seq[i][30+2*j], new_seq[i][30+2*j+1] = x, y
 
     return new_seq
 
-def user_to_mediapipe(C, seq):
-    '''
-    Transformation Function. Formats the normalized keypoints as per mediapipe output.
-    '''
-    new_seq = torch.zeros((len(seq), C.dynamic_input_dim))  # 4 absolute + 32 relative
+def reshape_user(seq):
+    ''' Reshapes user collected data into the same shape as SHREC data. '''
+    tmp_seq = torch.zeros((len(seq), 42))
     for i, iseq in enumerate(seq):
-        # Absolute
-        new_seq[i] = torch.cat([iseq[0:2], torch.zeros(34)])
-
-        if i == 0: # start of sequence
-            new_seq[i][2] = iseq[0]
-            new_seq[i][3] = iseq[1]
-        else:  # change in postiion
-            new_seq[i][2] = iseq[0] - new_seq[i-1][0]
-            new_seq[i][3] = iseq[1] - new_seq[i-1][1]
-
-        # Relative
-        for j in range(4):
-            # calculate L01, L12, L23, L34
-            new_seq[i][4+2*j] = iseq[3*j+3] - iseq[3*j] #L__X
-            new_seq[i][4+2*j+1] = iseq[3*j+4] - iseq[3*j+1] #L__Y
-
-        for j in range(3):
-            # calculate L56, L67, L78
-            new_seq[i][12+2*j] = iseq[3*j+18] - iseq[3*j+15]
-            new_seq[i][12+2*j+1] = iseq[3*j+19] - iseq[3*j+16]
-
-            # calculate L910, L1011, L1112
-            new_seq[i][18+2*j] = iseq[3*j+30] - iseq[3*j+27]
-            new_seq[i][18+2*j+1] = iseq[3*j+31] - iseq[3*j+28]
-
-            # calculate L1314, L1415, L1516
-            new_seq[i][24+2*j] = iseq[3*j+42] - iseq[3*j+39]
-            new_seq[i][24+2*j+1] = iseq[3*j+43] - iseq[3*j+40]
-
-            # calculate L1718, L1819, L1920
-            new_seq[i][30+2*j] = iseq[3*j+54] - iseq[3*j+51]
-            new_seq[i][30+2*j+1] = iseq[3*j+55] - iseq[3*j+52]
-
-    return new_seq
+        # Remove Z-axis coordinates
+        all_index = set(range(63))
+        del_index = set([i-1 for i in range(64) if i%3==0])
+        keep_index = all_index - del_index
+        count = 0
+        for k in keep_index:
+            tmp_seq[i][count] = iseq[k]
+            count+=1
+    return tmp_seq
 
 def read_shrec_data():
     ''' Reads data from SHREC2017 dataset files. '''
@@ -242,23 +228,20 @@ def main():
         f.write(json.dumps(gesture_mapping))
 
     # Higher order function to pass configuration to format_mediapipe
-    format_shrec = partial(shrec_to_mediapipe, C)
-    format_user = partial(user_to_mediapipe, C)
+    format_med = partial(format_mediapipe, C)
 
     # Custom transforms to prepare data.
-    base_transform = transforms.Compose([
+    transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(normalize),
         transforms.Lambda(resample_and_jitter),
+        transforms.Lambda(format_med),
     ])
-    shrec_transform = transforms.Compose([transforms.Lambda(format_shrec)])
-    user_transform = transforms.Compose([transforms.Lambda(format_user)])
-    final_transform = [shrec_transform, user_transform]
 
-    train_loader = DataLoader(ShrecDataset(train_x, train_y, base_transform, final_transform),
+    train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
                               num_workers=10, batch_size=C.dynamic_batch_size,
                               collate_fn=choose_collate(variable_length_collate, C))
-    val_loader = DataLoader(ShrecDataset(test_x, test_y, base_transform, final_transform),
+    val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
                             num_workers=10, batch_size=C.dynamic_batch_size,
                             collate_fn=choose_collate(variable_length_collate, C))
 
@@ -273,10 +256,10 @@ def main():
         model.replace_layers(C.dynamic_output_classes)
     else:
         model = ShrecNet(C.dynamic_input_dim, C.dynamic_output_classes, gesture_mapping)
-        # model.apply(init_weights)
+        model.apply(init_weights)
 
     early_stopping = EarlyStopping(
-        patience=10,
+        patience=5,
         verbose=True,
     )
 
@@ -291,7 +274,7 @@ def main():
     trainer = Trainer(gpus=1,
                       deterministic=True,
                       logger=wandb_logger,
-                      min_epochs=75,
+                      min_epochs=20,
                       accumulate_grad_batches=C.grad_accum,
                       early_stop_callback=early_stopping)
 
