@@ -5,6 +5,7 @@ given a set of keypoints.
 import math
 import numpy as np
 import torch
+from dynamic_train_model import calc_polar
 
 # Using the variable ctrl_flag to detect if the ctrl key is set.
 # Flag set by the Listener Thread (see gesture_receiver.py)
@@ -77,31 +78,35 @@ def format_dynamic_landmark(landmark, input_dim, S):
     else:  # change in postiion in polar coordinates
         x = formatted_landmark[0] - S.prev_landmark[0]
         y = formatted_landmark[1] - S.prev_landmark[1]
-        formatted_landmark[2] = (x**2 + y**2)**0.5 # magnitude
-        formatted_landmark[3] = math.atan2(y, x)/math.pi
+        formatted_landmark[2], formatted_landmark[3] = calc_polar(x, y)
 
     # Relative
     for i in range(4):
         # calculate L01, L12, L23, L34
-        formatted_landmark[4+2*i] = landmark[i+1]['x'] - landmark[i]['x'] #L__X
-        formatted_landmark[4+2*i+1] = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
+        x = landmark[i+1]['x'] - landmark[i]['x'] #L__X
+        y = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
+        formatted_landmark[4+2*i], formatted_landmark[4+2*i+1] = x,y
 
     for i in range(3):
         # calculate L56, L67, L78
-        formatted_landmark[12+2*i] = landmark[i+6]['x'] - landmark[i+5]['x']
-        formatted_landmark[12+2*i+1] = landmark[i+6]['y'] - landmark[i+5]['y']
+        x = landmark[i+6]['x'] - landmark[i+5]['x']
+        y = landmark[i+6]['y'] - landmark[i+5]['y']
+        formatted_landmark[12+2*i], formatted_landmark[12+2*i+1] = calc_polar(x, y)
 
         # calculate L910, L1011, L1112
-        formatted_landmark[18+2*i] = landmark[i+10]['x'] - landmark[i+9]['x']
-        formatted_landmark[18+2*i+1] = landmark[i+10]['y'] - landmark[i+9]['y']
+        x = landmark[i+10]['x'] - landmark[i+9]['x']
+        y = landmark[i+10]['y'] - landmark[i+9]['y']
+        formatted_landmark[18+2*i], formatted_landmark[18+2*i+1] = calc_polar(x, y)
 
         # calculate L1314, L1415, L1516
-        formatted_landmark[24+2*i] = landmark[i+14]['x'] - landmark[i+13]['x']
-        formatted_landmark[24+2*i+1] = landmark[i+14]['y'] - landmark[i+13]['y']
+        x = landmark[i+14]['x'] - landmark[i+13]['x']
+        y = landmark[i+14]['y'] - landmark[i+13]['y']
+        formatted_landmark[24+2*i], formatted_landmark[24+2*i+1] = calc_polar(x, y)
 
         # calculate L1718, L1819, L1920
-        formatted_landmark[30+2*i] = landmark[i+18]['x'] - landmark[i+17]['x']
-        formatted_landmark[30+2*i+1] = landmark[i+18]['y'] - landmark[i+17]['y']
+        x = landmark[i+18]['x'] - landmark[i+17]['x']
+        y = landmark[i+18]['y'] - landmark[i+17]['y']
+        formatted_landmark[30+2*i], formatted_landmark[30+2*i+1] = calc_polar(x, y)
 
     S.prev_landmark = formatted_landmark
 

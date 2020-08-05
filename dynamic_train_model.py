@@ -105,7 +105,6 @@ def format_mediapipe(C, seq):
             x = iseq[2*j+2] - iseq[2*j] #L__X
             y = iseq[2*j+3] - iseq[2*j+1] #L__Y
             new_seq[i][4+2*j], new_seq[i][4+2*j+1] = x, y
-            # new_seq[i][4+2*j], new_seq[i][4+2*j+1] = calc_polar(x, y)
 
         for j in range(3):
             # calculate L56, L67, L78
