@@ -85,28 +85,28 @@ def format_dynamic_landmark(landmark, input_dim, S):
         # calculate L01, L12, L23, L34
         x = landmark[i+1]['x'] - landmark[i]['x'] #L__X
         y = landmark[i+1]['y'] - landmark[i]['y'] #L__Y
-        formatted_landmark[4+2*i], formatted_landmark[4+2*i+1] = x,y
+        formatted_landmark[4+2*i], formatted_landmark[4+2*i+1] = x, y
 
     for i in range(3):
         # calculate L56, L67, L78
         x = landmark[i+6]['x'] - landmark[i+5]['x']
         y = landmark[i+6]['y'] - landmark[i+5]['y']
-        formatted_landmark[12+2*i], formatted_landmark[12+2*i+1] = calc_polar(x, y)
+        formatted_landmark[12+2*i], formatted_landmark[12+2*i+1] = x, y
 
         # calculate L910, L1011, L1112
         x = landmark[i+10]['x'] - landmark[i+9]['x']
         y = landmark[i+10]['y'] - landmark[i+9]['y']
-        formatted_landmark[18+2*i], formatted_landmark[18+2*i+1] = calc_polar(x, y)
+        formatted_landmark[18+2*i], formatted_landmark[18+2*i+1] = x, y
 
         # calculate L1314, L1415, L1516
         x = landmark[i+14]['x'] - landmark[i+13]['x']
         y = landmark[i+14]['y'] - landmark[i+13]['y']
-        formatted_landmark[24+2*i], formatted_landmark[24+2*i+1] = calc_polar(x, y)
+        formatted_landmark[24+2*i], formatted_landmark[24+2*i+1] = x, y
 
         # calculate L1718, L1819, L1920
         x = landmark[i+18]['x'] - landmark[i+17]['x']
         y = landmark[i+18]['y'] - landmark[i+17]['y']
-        formatted_landmark[30+2*i], formatted_landmark[30+2*i+1] = calc_polar(x, y)
+        formatted_landmark[30+2*i], formatted_landmark[30+2*i+1] = x, y
 
     S.prev_landmark = formatted_landmark
 
