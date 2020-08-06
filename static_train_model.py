@@ -132,7 +132,7 @@ def main():
     train_loader = format_and_load(train_X, train_Y, C.static_batch_size)
     test_loader = format_and_load(test_X, test_Y, C.static_batch_size)
 
-    gesture_net = GestureNet(C.static_input_dim, C.static_output_classes)
+    gesture_net = GestureNet(C.static_input_dim, C.static_output_classes, C.static_gesture_mapping)
 
     early_stopping = EarlyStopping(
         patience=3,

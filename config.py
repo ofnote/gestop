@@ -129,7 +129,8 @@ class Config:
         # Setting up networks
         if not self.lite:
             logging.info('Loading GestureNet...')
-            self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes)
+            self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes,
+                                          self.static_gesture_mapping)
             self.gesture_net.load_state_dict(torch.load(self.static_path,
                                                         map_location=self.map_location))
             self.gesture_net.eval()

@@ -19,9 +19,10 @@ class GestureNet(LightningModule):
     '''
     The implementation of the model which recognizes static gestures given the hand keypoints.
     '''
-    def __init__(self, input_dim, output_classes):
+    def __init__(self, input_dim, output_classes, gesture_mapping):
         super(GestureNet, self).__init__()
 
+        self.gesture_mapping = gesture_mapping
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, output_classes)
 
@@ -61,11 +62,42 @@ class GestureNet(LightningModule):
 
         output = self(x.float())
 
-        return {'test_acc': torch.argmax(output, axis=1) == y}
+        return {'test_acc': torch.argmax(output, axis=1) == y,
+                'test_pred': torch.argmax(output, axis=1),
+                'test_actual': y}
 
     def test_epoch_end(self, outputs):
         test_acc = torch.squeeze(torch.cat([x['test_acc'] for x in outputs]).float()).mean()
-        return {'test_acc':test_acc}
+        test_pred = torch.cat([x['test_pred'] for x in outputs]).cpu().numpy()
+        test_actual = torch.cat([x['test_actual'] for x in outputs]).cpu().numpy()
+
+        labels = list(self.gesture_mapping.values())
+
+        report = classification_report(test_actual, test_pred,
+                                       target_names=labels, output_dict=True)
+        # String representation for easy vieweing
+        str_report = classification_report(test_actual, test_pred, target_names=labels)
+        print(str_report)
+
+        # Format the report
+        report.pop('accuracy')
+        report.pop('macro avg')
+        for key, value in report.items():
+            report[key].pop('support')
+
+        conf_mat = confusion_matrix(test_actual, test_pred, normalize='true')
+        disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
+        disp = disp.plot(include_values=True, cmap=plt.cm.Blues,
+                         ax=None, xticks_rotation='vertical')
+        disp.figure_.set_size_inches(12, 12)
+
+        metrics = {"test_acc":test_acc}
+
+        self.logger.experiment.log({"confusion_matrix":disp.figure_})
+        self.logger.log_metrics(metrics)
+        self.logger.log_metrics(report)
+
+        return metrics
 
 class GestureDataset(Dataset):
     ''' Implementation of a GestureDataset which is then loaded into torch's DataLoader'''
