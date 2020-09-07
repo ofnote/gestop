@@ -1,5 +1,4 @@
-# gestures-mediapipe
-
+# gestop
 
 Built on top of [mediapipe](https://github.com/google/mediapipe), this project aims to be a tool to interact with a computer through hand gestures. Out of the box, using this tool, it is possible to:
 
@@ -12,7 +11,7 @@ However, it is possible to extend and customize the functionality of the applica
 2. Create custom functionality through the use of either python functions or shell scripts.
 3. Collect data and create your own custom gestures to use with existing gestures. 
 
-### [Demo video link](https://drive.google.com/file/d/1taQIUU69DhX6CG1gJdgwnz1Sqavqm7kn/view?usp=sharing)
+### [Demo video link](https://www.youtube.com/watch?v=K2UkIjK7BTI&t=19s)
 
 #### [Models link](https://drive.google.com/drive/folders/16lbPkdYWcmLfx0oFo01A5FwTiCDK5DDK?usp=sharing)
 
@@ -25,7 +24,6 @@ As well as mediapipe's own requirements, there are a few other libraries require
 * **ZeroMQ** - The zeromq library (*libzmq.so*) must be installed and symlinked into this directory. The header only C++ binding **cppzmq** must also be installed and its header (*zmq.hpp*) symlinked into the directory. 
 * **pyzmq**
 * **protobuf** 
-* **pyautogui**
 * **pynput**
 * **pytorch**
 * **pytorch-lightning**
@@ -35,41 +33,40 @@ As well as mediapipe's own requirements, there are a few other libraries require
 
 1. Clone mediapipe and set it up. Make sure the provided hand tracking example is working.
 2. Clone this repo in the top level directory of mediapipe. Install all dependencies.
-3. Download the `models/` folder from the link above and place it in the `gestures-mediapipe/` directory.
+3. Download the `models/` folder from the link above and place it in the `gestop/` directory.
 4. Run the instructions below to build and then execute the code. 
 
 *Note:* Run build instructions in the `mediapipe/` directory, not inside this directory.
+
+*Note:* Python dependencies can be installed simply by creating a virtual environment and running `pip install -r requirements.txt`
 
 #### Mediapipe Executable
 
 ##### GPU (Linux only)
 ``` sh
-bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestures-mediapipe:hand_tracking_gpu
+bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestop:hand_tracking_gpu
 
-GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_gpu --calculator_graph_config_file=gestures-mediapipe/hand_tracking_desktop_live.pbtxt
-
+GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
 ```
 
 ##### CPU
 ``` sh
-bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 gestures-mediapipe:hand_tracking_cpu
+bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 gestop:hand_tracking_cpu
 
-GLOG_logtostderr=1 bazel-bin/gestures-mediapipe/hand_tracking_cpu --calculator_graph_config_file=gestures-mediapipe/hand_tracking_desktop_live.pbtxt
-
+GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_cpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
 ```
 
 #### Python Script
 
 ``` python
-python gestures-mediapipe/gesture_receiver.py
-
+python gestop/gesture_receiver.py
 ```
 
 ### Overview
 
-The hand keypoints are detected using google's mediapipe. These keypoints are then fed into a Python script through zmq.  The tool utilizes the concept of **modes** i.e. we are currently in one of two modes, either **mouse** or **gestures**. 
+The hand keypoints are detected using google's mediapipe. These keypoints are then fed into a Python script through zmq.  The tool utilizes the concept of **modes** i.e. the tool is always in one of two modes, either **mouse** or **gestures**. 
 
-The **mouse** mode comprises of all functionality relevant to the mouse, which includes mouse tracking and the various possible mouse button actions. The mouse is tracked simply by moving the hand in mouse mode, where the tip of the index finger reflects the position of the cursor. The gestures related to the mouse actions are detailed below. A dataset was created and a neural network was trained on these gestures and with the use of the python library `pyautogui`, mouse actions are simulated.
+The **mouse** mode comprises of all functionality relevant to the mouse, which includes mouse tracking and the various possible mouse button actions. The mouse is tracked simply by moving the hand in mouse mode, where the tip of the index finger reflects the position of the cursor. The gestures related to the mouse actions are detailed below. A dataset was created and a neural network was trained on these gestures and with the use of the python library `pynput`, mouse actions are simulated.
 
 The **gestures** mode is for more advanced dynamic gestures involving a moving hand. It consists of various other actions to interface with the system, such as modifying screen brightness, switching workspaces, taking screenshots etc. The data for these dynamic gestures comes from [SHREC2017 dataset](http://www-rech.telecom-lille.fr/shrec2017-hand/). Dynamic gestures are detected by holding down the `Ctrl` key, performing the gesture, and then releasing the key.
 
@@ -84,41 +81,35 @@ The project consists of a few distinct pieces which are:
 ### Notes
 
 * Dynamic gestures are only supported with right hand, as all data from SHREC is right hand only.
-* A left click can be performed by performing the mouse down and gesture and immediately returning to the open hand gesture to register a single left mouse button click.
+* A left click can be performed by performing the mouse down gesture and immediately returning to the open hand gesture to register a single left mouse button click.
 * For dynamic gestures to work properly, you may need to change the keycodes being used in `gesture_executor.py`. Use the given `find_keycode.py` to find the keycodes of the keys used to change screen brightness and volumee. Finally, system shortcuts may need to be remapped so that the shortcuts work even with the Ctrl key held down. For example, in addition to the usual default behaviour of `<Prnt_Screen>` taking a screenshot, you may need to add `<Ctrl+Prnt_Screen>` as a shortcut as well. 
 
 ### Customization
 
-**gestures-mediapipe** is highly customizable and can be easily extended in various ways. The existing gesture-actions can be remapped easily, new actions can be defined (either a python function or a shel script, opening up a world of possiiblity to interact with your computer), and finally, if you so desire, you can capture data to create your own gestures and retrain the network to utilize your own custom gestures. The ways to accomplish the above are briefly described in this section. 
+**gestop** is highly customizable and can be easily extended in various ways. The existing gesture-action pairs can be remapped easily, new actions can be defined (either a python function or a shell script, opening up a world of possiiblity to interact with your computer), and finally, if you so desire, you can capture data to create your own gestures and retrain the network to utilize your own custom gestures. The ways to accomplish the above are briefly described in this section. 
 
 The default gesture-action mappings are stored in `data/action_config.json`. The format of the config file is:
 
-`{'gesture_name':['type','func_name','args']}`
+`{'gesture_name':['type','func_name']}`
 
-Where, gesture_name is the name of the gesture that is detected, type is either `sh`(shell) or `py`(python). If the type is `py`, then `func_name` is the name of a python function and if the type is `sh`, then `func_name` is either a shell command or a shell script (`./path/to/shell_script.sh`). Finally, `args` is only applicable for python functions. As the name suggests, it allows you to pass in arguments to the python functions. These arguments can be predefined or an arbitrary value. Refer `data/action_config.json` and `gesture_executor.py` for more details.
-
-The predefined arguments are:
-
-- `state` - The state of the application. Defined in `config.py`
-- `keyboard`- Passes a `pynput.keyboard.Controller` object to the function for keyboard related functionality.
-- `none` - Passes `None` 
+Where, gesture_name is the name of the gesture that is detected, type is either `sh`(shell) or `py`(python). If the type is `py`, then `func_name` is the name of a python function and if the type is `sh`, then `func_name` is either a shell command or a shell script (`./path/to/shell_script.sh`). Refer `data/action_config.json` and `gesture_executor.py` for more details.
 
 It is encouraged to make all custom configuration in a new file rather than replace the old. So, before your modifications, copy `data/action_config.json` and create a new file. After your modifications are done in the new file, you can run the application with your custom config using `python gesture_receiver.py --config-path my_custom_config.json`
 
 #### Remap gestures
 
-To remap functionality, all you need to do is swap the values (i.e. ``['type','func_name','args']`) for the gestures you wish to remap. As an example if you wish to take a screenshot with `Swipe +`, instead of `Grab`, the configuration would change from:
+To remap functionality, all you need to do is swap the values (i.e. ``['type','func_name']`) for the gestures you wish to remap. As an example if you wish to take a screenshot with `Swipe +`, instead of `Grab`, the configuration would change from:
 
 ``` json
-    "Grab" : ["py", "take_screenshot", "keyboard"],
-    "Swipe +" : ["py", "no_func", "none"],
+    "Grab" : ["py", "take_screenshot"],
+    "Swipe +" : ["py", "no_func"],
 ```
 
 To,
 
 ``` json
-    "Grab" : ["py", "no_func", "none"],
-    "Swipe +" : ["py", "take_screenshot", "keyboard"],
+    "Grab" : ["py", "no_func"],
+    "Swipe +" : ["py", "take_screenshot"],
 ```
 
 #### Adding new actions
@@ -126,17 +117,19 @@ To,
 Adding new actions is a similar process to remapping gestures, except for the additional step of defining your python function/shell command. As a simple example, if you wish to type your username on performing `Pinch`, the first step would be to write the python function in `user_config.py`. The function would be something similar to the following:
 
 ``` python
-def print_username(keyboard):
+def print_username(self, S):
     ''' Prints username '''
-    keyboard.type("sriramsk1999")
-    return keyboard
+    self.keyboard.type("sriramsk1999")
+    return S
 ```
+
+Where `S` represents the *State* and is passed to all the functions in `user_config.py`. Refer `user_config.py` and `config.py` to see more examples of how to add new actions. 
 
 Finally, replace the existing `Pinch` mapping with your own in your configuration file.
 
 ``` json
 
-    "Pinch" : ["py", "print_username", "keyboard"],
+    "Pinch" : ["py", "print_username"],
 ```
 
 #### Adding new gestures
