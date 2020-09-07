@@ -40,7 +40,7 @@
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
 #include <zmq.hpp> 
-#include "gestures-mediapipe/proto/landmarkList.pb.h"
+#include "gestop/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";

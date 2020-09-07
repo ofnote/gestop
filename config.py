@@ -40,6 +40,9 @@ class Config:
     else:
         map_location = None
 
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+
     # Set up logger
     logging.basicConfig(
         level=logging.DEBUG,

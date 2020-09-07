@@ -268,7 +268,7 @@ def main():
 
     wandb_logger = pl_loggers.WandbLogger(save_dir='logs/',
                                           name=args.exp_name,
-                                          project='gestures-mediapipe')
+                                          project='gestop')
 
     trainer = Trainer(gpus=1,
                       deterministic=True,

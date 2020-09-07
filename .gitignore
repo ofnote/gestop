@@ -5,3 +5,4 @@ logs
 dynamic_gestures
 static_gestures_data.csv
 models/
+env/

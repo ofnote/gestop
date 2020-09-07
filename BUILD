@@ -7,7 +7,7 @@ package(default_visibility = ["//visibility:public"])
 cc_binary(
     name = "hand_tracking_gpu",
     deps = [
-        "//gestures-mediapipe:hand_tracking_landmarks",
+        "//gestop:hand_tracking_landmarks",
         "//mediapipe/graphs/hand_tracking:mobile_calculators",
         ":zeromq",
     ],
@@ -16,7 +16,7 @@ cc_binary(
 cc_binary(
     name = "hand_tracking_cpu",
     deps = [
-        "//gestures-mediapipe:hand_tracking_landmarks_cpu",
+        "//gestop:hand_tracking_landmarks_cpu",
         "//mediapipe/graphs/hand_tracking:desktop_tflite_calculators",
     ],
 )
