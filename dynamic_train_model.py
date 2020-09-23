@@ -74,18 +74,38 @@ def resample_and_jitter(seq):
 def calc_polar(x,y):
     return (x**2 + y**2)**0.5, math.atan2(y, x)/math.pi
 
-def format_mediapipe(C, seq):
+def format_shrec(C, seq):
     '''
-    Transformation Function. Formats the normalized keypoints as per mediapipe output.
+    Transformation Function. Formats the SHREC data as per mediapipe output.
     '''
-    if len(seq[0]) == 63: # User collected data
-        seq = reshape_user(seq)
-    else: # SHREC data
-        # Make a new sequence without Palm keypoint
-        tmp_seq = torch.zeros((len(seq),42))
-        for i, iseq in enumerate(seq):
-            tmp_seq[i] = torch.cat([iseq[0:2], iseq[4:]])
-        seq = tmp_seq
+    # Make a new sequence without Palm keypoint
+    tmp_seq = torch.zeros((len(seq),42))
+    for i, iseq in enumerate(seq):
+        tmp_seq[i] = torch.cat([iseq[0:2], iseq[4:]])
+    seq = tmp_seq
+    return construct_seq(C, seq)
+
+def format_user(C, seq):
+    '''
+    Transformation Function. Formats the user data as per mediapipe output.
+    '''
+    tmp_seq = torch.zeros((len(seq), 42))
+    for i, iseq in enumerate(seq):
+        # Remove Z-axis coordinates
+        all_index = set(range(63))
+        del_index = set([i-1 for i in range(64) if i%3==0])
+        keep_index = all_index - del_index
+        count = 0
+        for k in keep_index:
+            tmp_seq[i][count] = iseq[k]
+            count+=1
+    seq = tmp_seq
+    return construct_seq(C, seq)
+
+def construct_seq(C, seq):
+    '''
+    Constructs the final sequence for the transformed data.
+    '''
     new_seq = torch.zeros((len(seq),C.dynamic_input_dim))
     for i, iseq in enumerate(seq):
         # Absolute
@@ -129,19 +149,6 @@ def format_mediapipe(C, seq):
 
     return new_seq
 
-def reshape_user(seq):
-    ''' Reshapes user collected data into the same shape as SHREC data. '''
-    tmp_seq = torch.zeros((len(seq), 42))
-    for i, iseq in enumerate(seq):
-        # Remove Z-axis coordinates
-        all_index = set(range(63))
-        del_index = set([i-1 for i in range(64) if i%3==0])
-        keep_index = all_index - del_index
-        count = 0
-        for k in keep_index:
-            tmp_seq[i][count] = iseq[k]
-            count+=1
-    return tmp_seq
 
 def read_shrec_data():
     ''' Reads data from SHREC2017 dataset files. '''
@@ -227,20 +234,27 @@ def main():
         f.write(json.dumps(gesture_mapping))
 
     # Higher order function to pass configuration to format_mediapipe
-    format_med = partial(format_mediapipe, C)
+    shrec_to_mediapipe = partial(format_shrec, C)
+    user_to_mediapipe = partial(format_user, C)
 
     # Custom transforms to prepare data.
-    transform = transforms.Compose([
+    shrec_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Lambda(normalize),
         transforms.Lambda(resample_and_jitter),
-        transforms.Lambda(format_med),
+        transforms.Lambda(shrec_to_mediapipe),
+    ])
+    user_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(torch.squeeze),
+        transforms.Lambda(resample_and_jitter),
+        transforms.Lambda(user_to_mediapipe),
     ])
 
-    train_loader = DataLoader(ShrecDataset(train_x, train_y, transform),
+    train_loader = DataLoader(ShrecDataset(train_x, train_y, shrec_transform, user_transform),
                               num_workers=10, batch_size=C.dynamic_batch_size,
                               collate_fn=choose_collate(variable_length_collate, C))
-    val_loader = DataLoader(ShrecDataset(test_x, test_y, transform),
+    val_loader = DataLoader(ShrecDataset(test_x, test_y, shrec_transform, user_transform),
                             num_workers=10, batch_size=C.dynamic_batch_size,
                             collate_fn=choose_collate(variable_length_collate, C))
 

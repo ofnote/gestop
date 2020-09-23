@@ -254,14 +254,18 @@ class ShrecDataset(Dataset):
     Implementation of a ShrecDataset which stores both SHREC and user data and
     formats it as required by the network during training.
     '''
-    def __init__(self, input_data, target, transform):
+    def __init__(self, input_data, target, shrec_transform, user_transform):
         self.input_data = input_data
         self.target = target
-        self.transform = transform
+        self.shrec_transform = shrec_transform
+        self.user_transform = user_transform
 
     def __len__(self):
         return len(self.input_data)
 
     def __getitem__(self, index):
-        x = self.transform(self.input_data[index])
+        if self.input_data[index].shape[1] == 44: #SHREC
+            x = self.shrec_transform(self.input_data[index])
+        else:
+            x = self.user_transform(self.input_data[index])
         return (x, self.target[index])
