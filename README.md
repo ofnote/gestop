@@ -5,7 +5,7 @@ Built on top of [mediapipe](https://github.com/google/mediapipe), this project a
 1. Use your hand to act as a replacement for the mouse.
 2. Perform hand gestures to control system parameters like screen brightness, volume etc.
 
-However, it is possible to extend and customize the functionality of the application in numerous ways:
+In addition, it is possible to extend and customize the functionality of the application in numerous ways:
 
 1. Remap existing hand gestures to different functions in order to better suit your needs.
 2. Create custom functionality through the use of either python functions or shell scripts.
@@ -64,29 +64,31 @@ python gestop/gesture_receiver.py
 
 ### Overview
 
-The hand keypoints are detected using google's mediapipe. These keypoints are then fed into a Python script through zmq.  The tool utilizes the concept of **modes** i.e. the tool is always in one of two modes, either **mouse** or **gestures**. 
+The hand keypoints are detected using google's mediapipe. These keypoints are then fed into `gesture_receiver.py` through zmq. The tool recognizes two kinds of gestures:
 
-The **mouse** mode comprises of all functionality relevant to the mouse, which includes mouse tracking and the various possible mouse button actions. The mouse is tracked simply by moving the hand in mouse mode, where the tip of the index finger reflects the position of the cursor. The gestures related to the mouse actions are detailed below. A dataset was created and a neural network was trained on these gestures and with the use of the python library `pynput`, mouse actions are simulated.
+1. Static Gestures : Gestures whose meaning can be inferred from a single image itself.
+2. Dynamic Gestures : Gestures which can only be understood through a sequence of images i.e. a video.
 
-The **gestures** mode is for more advanced dynamic gestures involving a moving hand. It consists of various other actions to interface with the system, such as modifying screen brightness, switching workspaces, taking screenshots etc. The data for these dynamic gestures comes from [SHREC2017 dataset](http://www-rech.telecom-lille.fr/shrec2017-hand/). Dynamic gestures are detected by holding down the `Ctrl` key, performing the gesture, and then releasing the key.
+Static gestures, by default, are mapped to all functionality relevant to the mouse, such as left mouse click, scroll etc. Combined with mouse tracking, this allows one to replace the mouse entirely. The mouse is tracked simply by moving the hand, where the tip of the index finger reflects the position of the cursor. The gestures related to the mouse actions are detailed below. To train the neural network to recognize static gestures, a dataset was created manually for the available gestures.
+
+For more complicated gestures involving the movement of the hand, dynamic gestures can be used. By default, it consists of various other actions to interface with the system, such as modifying screen brightness, switching workspaces, taking screenshots etc. The data for these dynamic gestures comes from [SHREC2017 dataset](http://www-rech.telecom-lille.fr/shrec2017-hand/). Dynamic gestures are detected by holding down the `Ctrl` key, which freezes the cursor, performing the gesture, and then releasing the key.
 
 The project consists of a few distinct pieces which are:
 
-* The mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
-* Gesture Receive - See `gesture_receiver.py`, responsible for handling the ZMQ stream and utilizing all the following modules.
-* Mouse tracking - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
-* Config detection - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand, i.e. a gesture name.
-* Config action - See `gesture_executor.py`, uses the gesture name from the previous module, and executes an action.
+* mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
+* Gesture Receiver - See `gesture_receiver.py`, responsible for handling the ZMQ stream and utilizing the following modules.
+* Mouse Tracker - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
+* Gesture Recognizer - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand, i.e. a gesture name.
+* Gesture Executor - See `gesture_executor.py`, uses the gesture name from the previous module, and executes an action.
 
 ### Notes
 
-* Dynamic gestures are only supported with right hand, as all data from SHREC is right hand only.
-* A left click can be performed by performing the mouse down gesture and immediately returning to the open hand gesture to register a single left mouse button click.
+* For best perforamnce, perform dynamic gestures with right hand only, as all data from SHREC is right hand only.
 * For dynamic gestures to work properly, you may need to change the keycodes being used in `gesture_executor.py`. Use the given `find_keycode.py` to find the keycodes of the keys used to change screen brightness and volumee. Finally, system shortcuts may need to be remapped so that the shortcuts work even with the Ctrl key held down. For example, in addition to the usual default behaviour of `<Prnt_Screen>` taking a screenshot, you may need to add `<Ctrl+Prnt_Screen>` as a shortcut as well. 
 
 ### Customization
 
-**gestop** is highly customizable and can be easily extended in various ways. The existing gesture-action pairs can be remapped easily, new actions can be defined (either a python function or a shell script, opening up a world of possiiblity to interact with your computer), and finally, if you so desire, you can capture data to create your own gestures and retrain the network to utilize your own custom gestures. The ways to accomplish the above are briefly described in this section. 
+**gestop** is highly customizable and can be easily extended in various ways. The existing gesture-action pairs can be remapped, new actions can be defined (either a python function or a shell script, opening up a world of possiiblity to interact with your computer), and finally, if you so desire, you can capture data to create your own gestures and retrain the network to utilize your own custom gestures. The ways to accomplish the above are briefly described in this section. 
 
 The default gesture-action mappings are stored in `data/action_config.json`. The format of the config file is:
 
@@ -94,7 +96,7 @@ The default gesture-action mappings are stored in `data/action_config.json`. The
 
 Where, gesture_name is the name of the gesture that is detected, type is either `sh`(shell) or `py`(python). If the type is `py`, then `func_name` is the name of a python function and if the type is `sh`, then `func_name` is either a shell command or a shell script (`./path/to/shell_script.sh`). Refer `data/action_config.json` and `gesture_executor.py` for more details.
 
-It is encouraged to make all custom configuration in a new file rather than replace the old. So, before your modifications, copy `data/action_config.json` and create a new file. After your modifications are done in the new file, you can run the application with your custom config using `python gesture_receiver.py --config-path my_custom_config.json`
+It is encouraged to make all custom configuration in a new file rather than replace the original. So, before your modifications, copy `data/action_config.json` and create a new file. After your modifications are done in the new file, you can run the application with your custom config using `python gesture_receiver.py --config-path my_custom_config.json`
 
 #### Remap gestures
 
@@ -142,7 +144,7 @@ To collect data for a new static gesture, run the program, enter the name of the
 
 To collect data for a new dynamic gesture, the process is mostly similar. Run the `dynamic_data_collection.py` program, enter the name of the gesture and run the mediapipe executable. Data is collected only when the Ctrl key is held down, so to collect a single sample, hold the ctrl key, perform the gesture and then release. Repeat this process a few dozen times to collect enough data.
 
-Finally, retrain the network. Use the `static_train_model.py` or the `dynamic_train_model.py` script depending on the new gesture. And after that, your new gesture is ready to be used in the configuration file.
+The next step is to retrain the network, using the `static_train_model.py` or the `dynamic_train_model.py` script depending on the new gesture. Finally, add the new gesture-action mapping to the configuration file. And that's it! Your new gesture is now part of gestop. 
 
 ### Gestures
 
