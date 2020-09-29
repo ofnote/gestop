@@ -49,6 +49,25 @@ def normalize(seq):
         i += 1
     return norm
 
+def smooth(seq):
+    '''
+    Transformation Function. Performs exponential smoothing on sequence with factor 'alpha'
+    '''
+    alpha = 0.9
+    smoothed = torch.empty(seq.shape)
+    i=0
+    for s in seq:
+        j=0
+        last = s[0] #First timestep
+        for point in s:
+            smoothval = last*alpha + (1-alpha)*point
+            smoothed[i][j] = smoothval
+            last = smoothval
+            j+=1
+        i+=1
+    return smoothed
+
+
 def resample_and_jitter(seq):
     '''
     Transformation Function. Augments the data in the following ways:
@@ -72,14 +91,15 @@ def resample_and_jitter(seq):
     return seq.float()
 
 def calc_polar(x,y):
+    ''' Calculate the polar form of the Cartesian coordinates x and y. '''
     return (x**2 + y**2)**0.5, math.atan2(y, x)/math.pi
 
 def format_shrec(C, seq):
     '''
     Transformation Function. Formats the SHREC data as per mediapipe output.
     '''
-    # Make a new sequence without Palm keypoint
     tmp_seq = torch.zeros((len(seq),42))
+    # Make a new sequence without Palm keypoint
     for i, iseq in enumerate(seq):
         tmp_seq[i] = torch.cat([iseq[0:2], iseq[4:]])
     seq = tmp_seq
@@ -108,14 +128,15 @@ def construct_seq(C, seq):
     '''
     new_seq = torch.zeros((len(seq),C.dynamic_input_dim))
     for i, iseq in enumerate(seq):
-        # Absolute
+        # Absolute coords
         new_seq[i][0] = iseq[0]
         new_seq[i][1] = iseq[1]
 
+        # Time diff coords
         if i == 0: #start of sequence
             new_seq[i][2] = 0
             new_seq[i][3] = 0
-        else: # Time diff coordinate
+        else:
              x = iseq[0] - new_seq[i-1][0]
              y = iseq[1] - new_seq[i-1][1]
              new_seq[i][2], new_seq[i][3] = calc_polar(x, y)
@@ -233,7 +254,7 @@ def main():
     with open('data/dynamic_gesture_mapping.json', 'w') as f:
         f.write(json.dumps(gesture_mapping))
 
-    # Higher order function to pass configuration to format_mediapipe
+    # Higher order function to pass configuration as argument
     shrec_to_mediapipe = partial(format_shrec, C)
     user_to_mediapipe = partial(format_user, C)
 
