@@ -1,7 +1,7 @@
 '''
 This script receives the hand keypoints detected by mediapipe through
 zmq and then writes them to disk to create a gesture dataset.
-To be run repeatedly for each gesture
+To be run repeatedly for each gesture.
 '''
 
 import logging
@@ -41,6 +41,7 @@ def main():
     while True:
         data = sock.recv()
 
+        # Start recording data
         if S.ctrl_flag:
             landmarkList.ParseFromString(data)
             landmarks = []
@@ -49,6 +50,7 @@ def main():
 
             keypoint_buffer.append(landmarks)
 
+        # if there is data recorded
         if len(keypoint_buffer) != 0 and not S.ctrl_flag:
             fname = path + "/" + gesture + str(count) + ".txt"
             lmark_str = ''
@@ -68,6 +70,7 @@ def main():
                 count += 1
             else:
                 logging.info("Data was not recorded properly, not written to file.")
+            # Empty the buffer
             keypoint_buffer = []
 
         if threading.active_count() == 1:

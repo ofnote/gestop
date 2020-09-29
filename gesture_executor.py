@@ -1,12 +1,12 @@
 '''
-Functions which execute an action given a gesture config
+Gesture Executor - Executes the action corresponding to a detected gesture
 '''
 import logging
 import subprocess
 
 def pose_action(pose, S, C):
     '''
-    Given a pose, decides what action to perform.
+    Given a pose, executes the corresponding action
     '''
     try:
         action = C.gesture_action_mapping[pose]

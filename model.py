@@ -115,7 +115,7 @@ class ShrecNet(LightningModule):
     '''
     The implementation of the model which recognizes dynamic hand gestures
     given a sequence of keypoints. Consists of a bidirectional GRU connected
-    to a fully conncted layer.
+    on both sides to a fully conncted layer.
     '''
     def __init__(self, input_dim, output_classes, gesture_mapping):
         super(ShrecNet, self).__init__()

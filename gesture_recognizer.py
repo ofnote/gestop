@@ -33,7 +33,7 @@ def format_landmark(landmark, hand, C, S):
 def format_static_landmark(landmark, hand, input_dim):
     '''
     Formats the input keypoints into the format expected by GestureNet.
-    Refer make_vector in train_model.py for more details
+    Refer make_vector in static_train_model.py for more details
     '''
     formatted_landmark = np.empty((input_dim))
     for i in range(4):
@@ -65,7 +65,7 @@ def format_static_landmark(landmark, hand, input_dim):
 def format_dynamic_landmark(landmark, input_dim, S):
     '''
     Formats the input keypoints into the format expected by ShrecNet.
-    Refer format_mediapipe in dynamic_train_model.py for format details.
+    Refer construct_seq in dynamic_train_model.py for format details.
     '''
     formatted_landmark = np.zeros((input_dim))
     # Absolute

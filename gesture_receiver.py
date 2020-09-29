@@ -1,5 +1,5 @@
 '''
-Receives the data from mediapipe
+Receives the data from mediapipe.
 Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
@@ -74,7 +74,7 @@ def handle_and_recognize(landmarks, handedness, C, S):
 
         # get pointer location
         mouse_pointer, S = calc_pointer(landmarks, S, C.resolution, C.map_coord)
-        # control the mouse
+        # track the mouse
         S = mouse_track(mouse_pointer, S, C.mouse, C.scroll_unit)
 
     ####################
