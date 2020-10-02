@@ -61,7 +61,7 @@ class Config:
     lite: bool
 
     # Path to action configuration file
-    config_path: str = 'data/action_config.json'
+    config_path: str = 'gestop/data/action_config.json'
 
     # Seed value for reproducibility
     seed_val: int = 42
@@ -95,9 +95,9 @@ class Config:
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)
 
-    static_path: str = 'models/gesture_net.pth'
-    shrec_path: str = 'models/shrec_net.pth'
-    dynamic_path: str = 'models/user_net.pth'
+    static_path: str = 'gestop/models/gesture_net.pth'
+    shrec_path: str = 'gestop/models/shrec_net.pth'
+    dynamic_path: str = 'gestop/models/user_net.pth'
 
     gesture_net: GestureNet = field(init=False)
     shrec_net: ShrecNet = field(init=False)
@@ -118,9 +118,9 @@ class Config:
 
     def __post_init__(self):
         # Fetching gesture mappings
-        with open('data/static_gesture_mapping.json', 'r') as jsonfile:
+        with open('gestop/data/static_gesture_mapping.json', 'r') as jsonfile:
             self.static_gesture_mapping = json.load(jsonfile)
-        with open('data/dynamic_gesture_mapping.json', 'r') as jsonfile:
+        with open('gestop/data/dynamic_gesture_mapping.json', 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)
 
         with open(self.config_path, 'r') as jsonfile:
