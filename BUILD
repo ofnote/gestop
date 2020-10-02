@@ -18,6 +18,7 @@ cc_binary(
     deps = [
         "//gestop:hand_tracking_landmarks_cpu",
         "//mediapipe/graphs/hand_tracking:desktop_tflite_calculators",
+        ":zeromq",
     ],
 )
 

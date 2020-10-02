@@ -36,7 +36,7 @@
 
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
-//#include "gestop/zmq.hpp"
+#include <zmq.hpp>
 #include "gestop/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
@@ -56,7 +56,7 @@ DEFINE_string(output_video_path, "",
               "If not provided, show result in a window.");
 
 #define PORT 8089 
-#define USE_ZMQ 0
+#define USE_ZMQ 1
 #ifndef SERVER_IP
 #define SERVER_IP "127.0.0.1"
 //#define SERVER_IP "192.168.0.107"
