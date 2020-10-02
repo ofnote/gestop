@@ -146,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
                         dest="mouse_track", action='store_false')
     parser.add_argument("--config-path", help="Path to custom configuration file",
-                        type=str, default="data/action_config.json")
+                        type=str, default="gestop/data/action_config.json")
     parser.add_argument("--no-action", help="Disbaled execution of actions. Useful for debugging.",
                         dest="exec_action", action='store_false')
     args = parser.parse_args()
