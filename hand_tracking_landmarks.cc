@@ -39,7 +39,6 @@
 
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
-#include <zmq.hpp> 
 #include "gestop/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
@@ -59,8 +58,7 @@ DEFINE_string(output_video_path, "",
               "Full path of where to save result (.mp4 only). "
               "If not provided, show result in a window.");
 
-#define PORT 8089 
-#define USE_ZMQ 1
+#define PORT 5556
 #ifndef SERVER_IP
 #define SERVER_IP "127.0.0.1"
 //#define SERVER_IP "192.168.0.107"
@@ -68,30 +66,31 @@ DEFINE_string(output_video_path, "",
 
 
 int connect_to_server() {
-    int sock = 0, valread; 
+    int sock = 0, valread;
     struct sockaddr_in serv_addr;
+    printf("%s", SERVER_IP);
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        printf("\n Socket creation error \n"); 
-        return -1; 
-    } 
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Socket creation error \n");
+        return -1;
+    }
 
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(PORT); 
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
 
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)  
-    { 
-        printf("\nInvalid address/ Address not supported \n"); 
-        return -1; 
-    } 
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)
+    {
+        printf("\nInvalid address/ Address not supported \n");
+        return -1;
+    }
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        printf("\nServer Connection Failed \n"); 
-        return -1; 
-    } 
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        printf("\nServer Connection Failed \n");
+        return -1;
+    }
     else {
         printf("\n** Server Connected **\n");
     }
@@ -151,14 +150,8 @@ int connect_to_server() {
             graph.AddOutputStreamPoller(kPresenceStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
-  #if USE_ZMQ
-    zmq::context_t ctx;
-    zmq::socket_t sock(ctx, zmq::socket_type::push);
-    sock.bind("tcp://127.0.0.1:5556");
-  #else
-    int sock;
-    sock = connect_to_server();
-  #endif
+  int sock;
+  sock = connect_to_server();
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -212,9 +205,9 @@ int connect_to_server() {
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
     auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
     auto& hand_presence = presence_packet.Get<float>();
-    //for (const float& presence : hand_presence) {
-    //}
 
+    int IMAGE_WIDTH = 256; // mediapipe > 0.7.6 normalizes z coord by image width.
+                           // multiplying by image_width to denormalize.
     hand_tracking::LandmarkList landmarks;
     landmarks.set_handedness(output_handedness.classification(0).index());
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
@@ -222,32 +215,16 @@ int connect_to_server() {
           hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();
           l->set_x(output_landmarks.landmark(i).x());
           l->set_y(output_landmarks.landmark(i).y());
-          l->set_z(output_landmarks.landmark(i).z());
-          //std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";  
+          l->set_z(output_landmarks.landmark(i).z()*IMAGE_WIDTH);
+          // std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";
     }
+    // std::cout << "\n\n\n-----------------------------------------------------\n\n\n";
     std::string output;
     landmarks.SerializeToString(&output);
-    
-    #if USE_ZMQ
-      if (hand_presence > 0.9){
-        sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
-      }
-      //else {
-      //  std::cout << "Not sent" << hand_presence << "\n";
-      //}
-    #else
-      send(sock, output.c_str(), output.size(), 0);
-    #endif
 
-    /*
-    for (int i=0; i< output_landmarks.landmark_size(); i++) {
-          const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
-          std::cout << "Landmark number: "<< i << "   x coordinate: " << landmark.x() << "   y coordinate: " << landmark.y() << "  z coordinate: " << landmark.z() << "\n";  
-    }
-    std::cout << "\n\n\n-----------------------------------------------------\n\n\n";
-    //top-left - (0,0)
-    //top-right - (1,0)
-    */
+    if (hand_presence > 0.9)
+      send(sock, output.c_str(), output.size(), 0);
+
 /*
     // Landmark 8 is tip of index finger
     float index_pointer_x = output_landmarks.landmark(8).x();

@@ -8,7 +8,7 @@ from functools import partial
 import argparse
 import logging
 
-import zmq
+import socket
 from pynput.keyboard import Listener, Key
 
 from proto import landmarkList_pb2
@@ -112,25 +112,31 @@ def process_data(data, landmark_list, C, S):
 
     S = handle_and_recognize(landmarks, handedness, C, S)
 
-def handle_zmq_stream(args):
+def handle_stream(args):
     ''' Handles the incoming stream of data from mediapipe. '''
 
     C, S, landmark_list = all_init(args)
 
-    # setup zmq context
-    context = zmq.Context()
-    sock = context.socket(zmq.PULL)
-    sock.connect("tcp://127.0.0.1:5556")
+    # setup socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    HOST = '127.0.0.1'
+    PORT = 5556
+    sock.bind((HOST, PORT))
+    sock.listen(1)
+
+    conn, addr = sock.accept()
     # Main while loop
     while True:
-        data = sock.recv()
+        data = conn.recv(4096)
         process_data(data, landmark_list, C, S)
 
         # The key listener thread has shut down, leaving only MainThread
         if threading.active_count() == 1:
             break
 
+    conn.close()
+    sock.close()
 
 if __name__ == "__main__":
     # run_socket_server()
@@ -151,5 +157,5 @@ if __name__ == "__main__":
                         dest="exec_action", action='store_false')
     args = parser.parse_args()
 
-    handle_zmq_stream(args)
+    handle_stream(args)
     logging.info("Shutdown successfully")
