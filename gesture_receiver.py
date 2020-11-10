@@ -110,6 +110,9 @@ def all_init(args):
 def process_data(data, landmark_list, C, S):
     landmarks, handedness = get_landmarks(data, landmark_list)
 
+    if landmarks == []:
+        raise ValueError("Landmarks not received")
+
     S = handle_and_recognize(landmarks, handedness, C, S)
 
 def handle_stream(args):
@@ -125,22 +128,24 @@ def handle_stream(args):
     sock.bind((HOST, PORT))
     sock.listen(1)
 
-    conn, addr = sock.accept()
-    # Main while loop
     while True:
-        data = conn.recv(4096)
-        process_data(data, landmark_list, C, S)
-
-        # The key listener thread has shut down, leaving only MainThread
-        if threading.active_count() == 1:
-            break
-
-    conn.close()
+        # Establish connection
+        conn, addr = sock.accept()
+        while True:
+            data = conn.recv(4096)
+            try:
+                process_data(data, landmark_list, C, S)
+            except ValueError as v:
+                print(v)
+                print("Closing Connection")
+                break
+            # The key listener thread has shut down, leaving only MainThread
+            if threading.active_count() == 1:
+                break
+        conn.close()
     sock.close()
 
 if __name__ == "__main__":
-    # run_socket_server()
-
     # Program runs on two threads
     # 1. Key Listener Thread -> Listens to what keys are being pressed
     # Dynamic gestures are only recognized if the Ctrl key is pressed
