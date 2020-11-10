@@ -36,13 +36,13 @@
 
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
-#include <zmq.hpp>
 #include "gestop/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
 constexpr char kLandmarksStream[] = "hand_landmarks";
 constexpr char kHandednessStream[] = "handedness";
+constexpr char kPresenceStream[] = "hand_presence_score";
 constexpr char kWindowName[] = "MediaPipe";
 
 DEFINE_string(
@@ -55,8 +55,7 @@ DEFINE_string(output_video_path, "",
               "Full path of where to save result (.mp4 only). "
               "If not provided, show result in a window.");
 
-#define PORT 8089 
-#define USE_ZMQ 1
+#define PORT 5556
 #ifndef SERVER_IP
 #define SERVER_IP "127.0.0.1"
 //#define SERVER_IP "192.168.0.107"
@@ -140,16 +139,12 @@ int connect_to_server() {
             graph.AddOutputStreamPoller(kLandmarksStream));
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_handedness,
             graph.AddOutputStreamPoller(kHandednessStream));
+  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller poller_presence,
+            graph.AddOutputStreamPoller(kPresenceStream));
   MP_RETURN_IF_ERROR(graph.StartRun({}));
 
-#if USE_ZMQ
-  zmq::context_t ctx;
-  zmq::socket_t sock(ctx, zmq::socket_type::push);
-  sock.bind("tcp://127.0.0.1:5556");
-#else
   int sock;
   sock = connect_to_server();
-#endif
 
   LOG(INFO) << "Start grabbing and processing frames.";
   bool grab_frames = true;
@@ -182,39 +177,36 @@ int connect_to_server() {
     mediapipe::Packet packet;
     mediapipe::Packet landmark_packet;
     mediapipe::Packet handedness_packet;
+    mediapipe::Packet presence_packet;
     if (!poller.Next(&packet)) break;
     if (!poller_landmark.Next(&landmark_packet)) break;
     if (!poller_handedness.Next(&handedness_packet)) break;
+    if (!poller_presence.Next(&presence_packet)) continue;
     auto& output_frame = packet.Get<mediapipe::ImageFrame>();
 
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
     auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
+    auto& hand_presence = presence_packet.Get<float>();
 
+    int IMAGE_WIDTH = 256; // mediapipe > 0.7.6 normalizes z coord by image width.
+                           // multiplying by image_width to denormalize.
     hand_tracking::LandmarkList landmarks;
     landmarks.set_handedness(output_handedness.classification(0).index());
-    //std::cout <<  
     for (int i=0; i< output_landmarks.landmark_size(); i++) {
           //const mediapipe::NormalizedLandmark& landmark = output_landmarks.landmark(i);
           hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();
           l->set_x(output_landmarks.landmark(i).x());
           l->set_y(output_landmarks.landmark(i).y());
-          l->set_z(output_landmarks.landmark(i).z());
+          l->set_z(output_landmarks.landmark(i).z()*256);
           //std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";  
     }
+    // std::cout << "\n\n\n-----------------------------------------------------\n\n\n";
     std::string output;
     landmarks.SerializeToString(&output);
 
-#if USE_ZMQ
-    sock.send(zmq::buffer(output), zmq::send_flags::dontwait);    
-#else
-    //send(sock , hello , strlen(hello) , 0 ); 
-    //printf(output.c_str());
-    const uint32_t size = output.size();
-    //printf("size = %d\n", sizeof(size));
-    send(sock, &size, sizeof (size), 0);
-    send(sock, output.c_str(), output.size(), 0);
-#endif
-    
+    if (hand_presence > 0.9)
+      send(sock, output.c_str(), output.size(), 0);
+
     // Convert back to opencv for display or saving.
     cv::Mat output_frame_mat = mediapipe::formats::MatView(&output_frame);
     cv::cvtColor(output_frame_mat, output_frame_mat, cv::COLOR_RGB2BGR);

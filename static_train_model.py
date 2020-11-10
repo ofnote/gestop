@@ -107,7 +107,7 @@ def main():
     ##################
 
     # Read and format the csv
-    df = pd.read_csv("data/static_gestures_data.csv")
+    df = pd.read_csv("gestop/data/static_gestures_data.csv")
     train, test = train_test_split(df, test_size=0.1, random_state=C.seed_val)
     train_X, train_Y = split_dataframe(train)
     test_X, test_Y = split_dataframe(test)
@@ -122,7 +122,7 @@ def main():
     # Store encoding to disk
     le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
     logging.info(le_name_mapping)
-    with open('data/static_gesture_mapping.json', 'w') as f:
+    with open('gestop/data/static_gesture_mapping.json', 'w') as f:
         f.write(json.dumps(le_name_mapping))
 
 

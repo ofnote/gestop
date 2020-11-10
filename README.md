@@ -19,10 +19,7 @@ In addition, it is possible to extend and customize the functionality of the app
 
 ### Requirements
 
-As well as mediapipe's own requirements, there are a few other libraries required for this project.
-
-* **ZeroMQ** - The zeromq library (*libzmq.so*) must be installed and symlinked into this directory. The header only C++ binding **cppzmq** must also be installed and its header (*zmq.hpp*) symlinked into the directory. 
-* **pyzmq**
+* **opencv**
 * **protobuf** 
 * **pynput**
 * **pytorch**
@@ -31,40 +28,57 @@ As well as mediapipe's own requirements, there are a few other libraries require
 
 ### Usage
 
-1. Clone mediapipe and set it up. Make sure the provided hand tracking example is working.
-2. Clone this repo in the top level directory of mediapipe. Install all dependencies.
-3. Download the `models/` folder from the link above and place it in the `gestop/` directory.
-4. Run the instructions below to build and then execute the code. 
+#### Server
 
-*Note:* Run build instructions in the `mediapipe/` directory, not inside this directory.
+To start the **Gestop** server, do the following:
+
+1. Clone this repo and install all its dependencies.
+2. Download the `models/` folder from the link above and place it in the `gestop/` directory.
+3. Start the server with the following command:
+
+``` python
+python gestop/gesture_receiver.py
+```
 
 *Note:* Python dependencies can be installed simply by creating a virtual environment and running `pip install -r requirements.txt`
 
-#### Mediapipe Executable
+#### Client
 
-##### GPU (Linux only)
+The client, or the *keypoint provider*, can be setup either through MediaPipe's C++ API, or through its Python API. The Python API is simpler to setup and is recommended.
+
+#### MediaPipe Python API
+
+Install the libraries required by `hand_tracking.py` i.e. **opencv** and **mediapipe**. Then, run the code with:
+
+``` python
+python gestop/hand_tracking.py
+```
+
+##### MediaPipe C++ API
+
+1. Download mediapipe and set it up. MediaPipe >=0.8.0 is **NOT** supported and should no be used. Make sure the provided hand tracking example is working to verify if all dependencies are installed.
+2. Clone this repo in the top level directory of mediapipe. Install all of Gestop's dependencies.
+3. Run the instructions below to build and then execute the code. 
+
+*Note:* Run build instructions in the `mediapipe/` directory, not inside this directory.
+
+###### GPU (Linux only)
 ``` sh
 bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestop:hand_tracking_gpu
 
 GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
 ```
 
-##### CPU
+###### CPU
 ``` sh
 bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 gestop:hand_tracking_cpu
 
 GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_cpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
 ```
 
-#### Python Script
-
-``` python
-python gestop/gesture_receiver.py
-```
-
 ### Overview
 
-The hand keypoints are detected using google's mediapipe. These keypoints are then fed into `gesture_receiver.py` through zmq. The tool recognizes two kinds of gestures:
+The hand keypoints are detected using google's mediapipe. These keypoints are then fed into `gesture_receiver.py` through a socket. The tool recognizes two kinds of gestures:
 
 1. Static Gestures : Gestures whose meaning can be inferred from a single image itself.
 2. Dynamic Gestures : Gestures which can only be understood through a sequence of images i.e. a video.
@@ -75,8 +89,8 @@ For more complicated gestures involving the movement of the hand, dynamic gestur
 
 The project consists of a few distinct pieces which are:
 
-* mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using ZMQ.
-* Gesture Receiver - See `gesture_receiver.py`, responsible for handling the ZMQ stream and utilizing the following modules.
+* mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using sockets.
+* Gesture Receiver - See `gesture_receiver.py`, responsible for handling the stream and utilizing the following modules.
 * Mouse Tracker - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
 * Gesture Recognizer - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand, i.e. a gesture name.
 * Gesture Executor - See `gesture_executor.py`, uses the gesture name from the previous module, and executes an action.

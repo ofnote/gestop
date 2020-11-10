@@ -40,15 +40,15 @@ class Config:
     else:
         map_location = None
 
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
+    if not os.path.exists('gestop/logs'):
+        os.mkdir('gestop/logs')
 
     # Set up logger
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler("logs/debug{}.log".format(
+            logging.FileHandler("gestop/logs/debug{}.log".format(
                 datetime.datetime.now().strftime("%m.%d:%H.%M.%S"))),
             logging.StreamHandler(stdout)
         ]
