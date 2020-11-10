@@ -56,8 +56,8 @@ python gestop/hand_tracking.py
 
 ##### MediaPipe C++ API
 
-1. Clone mediapipe and set it up. Make sure the provided hand tracking example is working.
-2. Clone this repo in the top level directory of mediapipe. Install all dependencies.
+1. Download mediapipe and set it up. MediaPipe >=0.8.0 is **NOT** supported and should no be used. Make sure the provided hand tracking example is working to verify if all dependencies are installed.
+2. Clone this repo in the top level directory of mediapipe. Install all of Gestop's dependencies.
 3. Run the instructions below to build and then execute the code. 
 
 *Note:* Run build instructions in the `mediapipe/` directory, not inside this directory.
