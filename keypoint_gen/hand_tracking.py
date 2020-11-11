@@ -2,6 +2,8 @@ import cv2
 import mediapipe as mp
 import socket
 
+import sys
+sys.path.append("gestop")
 from proto import landmarkList_pb2
 
 mp_drawing = mp.solutions.drawing_utils
