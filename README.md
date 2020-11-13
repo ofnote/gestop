@@ -44,14 +44,14 @@ python gestop/gesture_receiver.py
 
 #### Client
 
-The client, or the *keypoint provider*, can be setup either through MediaPipe's C++ API, or through its Python API. The Python API is simpler to setup and is recommended.
+The client, or the *keypoint generator*, can be setup either through MediaPipe's C++ API, or through its Python API. The Python API is simpler to setup and is recommended.
 
 #### MediaPipe Python API
 
 Install the libraries required by `hand_tracking.py` i.e. **opencv** and **mediapipe**. Then, run the code with:
 
 ``` python
-python gestop/hand_tracking.py
+python gestop/keypoint_gen/hand_tracking.py
 ```
 
 ##### MediaPipe C++ API
@@ -66,14 +66,14 @@ python gestop/hand_tracking.py
 ``` sh
 bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestop:hand_tracking_gpu
 
-GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
+GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/keypoint_gen/hand_tracking_desktop_live.pbtxt
 ```
 
 ###### CPU
 ``` sh
 bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 gestop:hand_tracking_cpu
 
-GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_cpu --calculator_graph_config_file=gestop/hand_tracking_desktop_live.pbtxt
+GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_cpu --calculator_graph_config_file=gestop/keypoint_gen/hand_tracking_desktop_live.pbtxt
 ```
 
 ### Overview
