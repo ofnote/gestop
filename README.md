@@ -17,23 +17,16 @@ In addition, it is possible to extend and customize the functionality of the app
 
 #### [Dataset link](https://drive.google.com/drive/folders/1zMFQVKvpAhU-EKGxQNyFXKTu1TgBH23L?usp=sharing)
 
-### Requirements
-
-* **opencv**
-* **protobuf** 
-* **pynput**
-* **pytorch**
-* **pytorch-lightning**
-* **xdotool**
-
 ### Usage
+
+In addition to the Python libraries in `requirements.txt`, [OpenCV](https://opencv.org/) and [xdotool](https://github.com/jordansissel/xdotool) are also required by Gestop.
 
 #### Server
 
 To start the **Gestop** server, do the following:
 
 1. Clone this repo and install all its dependencies.
-2. Download the `models/` folder from the link above and place it in the `gestop/` directory.
+2. Execute the `get_models.sh` script to download the models and place the folder in the `gestop/` directory.
 3. Start the server with the following command:
 
 ``` python
@@ -78,7 +71,7 @@ GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_cpu --calculator_graph_config_
 
 ### Overview
 
-The hand keypoints are detected using google's mediapipe. These keypoints are then fed into `gesture_receiver.py` through a socket. The tool recognizes two kinds of gestures:
+The hand keypoints are detected using google's MediaPipe. These keypoints are then fed into `gesture_receiver.py` . The tool recognizes two kinds of gestures:
 
 1. Static Gestures : Gestures whose meaning can be inferred from a single image itself.
 2. Dynamic Gestures : Gestures which can only be understood through a sequence of images i.e. a video.
@@ -89,7 +82,7 @@ For more complicated gestures involving the movement of the hand, dynamic gestur
 
 The project consists of a few distinct pieces which are:
 
-* mediapipe executable - A modified version of the hand tracking example given in mediapipe, this executable tracks the keypoints, stores them in a protobuf, and transmits them using sockets.
+* MediaPipe - Accessed through either the Python API or the C++ API, MediaPipe tracks the hand, generates the keypoints and transmits them.
 * Gesture Receiver - See `gesture_receiver.py`, responsible for handling the stream and utilizing the following modules.
 * Mouse Tracker - See `mouse_tracker.py`, responsible for moving the cursor using the position of the index finger.
 * Gesture Recognizer - See `gesture_recognizer.py`, takes in the keypoints from the mediapipe executable, and converts them into a high level description of the state of the hand, i.e. a gesture name.
@@ -97,93 +90,12 @@ The project consists of a few distinct pieces which are:
 
 ### Notes
 
-* For best perforamnce, perform dynamic gestures with right hand only, as all data from SHREC is right hand only.
-* For dynamic gestures to work properly, you may need to change the keycodes being used in `gesture_executor.py`. Use the given `find_keycode.py` to find the keycodes of the keys used to change screen brightness and volumee. Finally, system shortcuts may need to be remapped so that the shortcuts work even with the Ctrl key held down. For example, in addition to the usual default behaviour of `<Prnt_Screen>` taking a screenshot, you may need to add `<Ctrl+Prnt_Screen>` as a shortcut as well. 
+* For best performance, perform dynamic gestures with right hand only, as all data from SHREC is right hand only.
+* For dynamic gestures to work properly, you may need to change the keycodes being used in `gesture_executor.py`. Use the given `find_keycode.py` script to find the keycodes of the keys used to change screen brightness and volumee. Finally, system shortcuts may need to be remapped so that the shortcuts work even with the Ctrl key held down. For example, in addition to the usual default behaviour of `<Prnt_Screen>` taking a screenshot, you may need to add `<Ctrl+Prnt_Screen>` as a shortcut as well. 
 
-### Customization
+### [Customizing Gestop](CUSTOMIZATION.md)
 
-**gestop** is highly customizable and can be easily extended in various ways. The existing gesture-action pairs can be remapped, new actions can be defined (either a python function or a shell script, opening up a world of possiiblity to interact with your computer), and finally, if you so desire, you can capture data to create your own gestures and retrain the network to utilize your own custom gestures. The ways to accomplish the above are briefly described in this section. 
-
-The default gesture-action mappings are stored in `data/action_config.json`. The format of the config file is:
-
-`{'gesture_name':['type','func_name']}`
-
-Where, gesture_name is the name of the gesture that is detected, type is either `sh`(shell) or `py`(python). If the type is `py`, then `func_name` is the name of a python function and if the type is `sh`, then `func_name` is either a shell command or a shell script (`./path/to/shell_script.sh`). Refer `data/action_config.json` and `gesture_executor.py` for more details.
-
-It is encouraged to make all custom configuration in a new file rather than replace the original. So, before your modifications, copy `data/action_config.json` and create a new file. After your modifications are done in the new file, you can run the application with your custom config using `python gesture_receiver.py --config-path my_custom_config.json`
-
-#### Remap gestures
-
-To remap functionality, all you need to do is swap the values (i.e. ``['type','func_name']`) for the gestures you wish to remap. As an example if you wish to take a screenshot with `Swipe +`, instead of `Grab`, the configuration would change from:
-
-``` json
-    "Grab" : ["py", "take_screenshot"],
-    "Swipe +" : ["py", "no_func"],
-```
-
-To,
-
-``` json
-    "Grab" : ["py", "no_func"],
-    "Swipe +" : ["py", "take_screenshot"],
-```
-
-#### Adding new actions
-
-Adding new actions is a similar process to remapping gestures, except for the additional step of defining your python function/shell command. As a simple example, if you wish to type your username on performing `Pinch`, the first step would be to write the python function in `user_config.py`. The function would be something similar to the following:
-
-``` python
-def print_username(self, S):
-    ''' Prints username '''
-    self.keyboard.type("sriramsk1999")
-    return S
-```
-
-Where `S` represents the *State* and is passed to all the functions in `user_config.py`. Refer `user_config.py` and `config.py` to see more examples of how to add new actions. 
-
-Finally, replace the existing `Pinch` mapping with your own in your configuration file.
-
-``` json
-
-    "Pinch" : ["py", "print_username"],
-```
-
-#### Adding new gestures
-
-To extend this application and create new gestures, there are a few prerequisites. Firstly, download the data from from the dataset link given above, and place in the `data/` directory. This is to ensure that your model has all existing data along with the new data to train on.
-
-You can either record a new static gesture or a dynamic gesture, with the `static_data_collection.py` and `dynamic_data_collection.py` scripts respectively.
-
-To collect data for a new static gesture, run the program, enter the name of the gesture and the hand with which you will be performing the gesture. Run the mediapipe executable and hold the gesture while data is collected. A 1000 samples are collected which should take a minute or two. Hold your hand in the same pose in good lighting to ensure the model gets clean data.
-
-To collect data for a new dynamic gesture, the process is mostly similar. Run the `dynamic_data_collection.py` program, enter the name of the gesture and run the mediapipe executable. Data is collected only when the Ctrl key is held down, so to collect a single sample, hold the ctrl key, perform the gesture and then release. Repeat this process a few dozen times to collect enough data.
-
-The next step is to retrain the network, using the `static_train_model.py` or the `dynamic_train_model.py` script depending on the new gesture. Finally, add the new gesture-action mapping to the configuration file. And that's it! Your new gesture is now part of gestop. 
-
-### Gestures
-
-#### Static Gestures
-
-| Gesture name   | Gesture Action   | Image                               |
-| -------------- | ---------------- | --------------------------------    |
-| seven          | Left Mouse Down  | ![seven](images/seven2.png)         |
-| eight          | Double Click     | ![eight](images/eight2.png)         |
-| four           | Right Mouse Down | ![four](images/four2.png)           |
-| spiderman      | Scroll           | ![spiderman](images/spiderman2.png) |
-| hitchhike      | Mode Switch      | ![hitchhike](images/hitchhike2.png) |
-
-#### Dynamic Gestures
-
-| Gesture name             | Gesture Action                     | Gif                                              |
-| --------------           | ----------------                   | ---------                                        |
-| Swipe Right              | Move to the workspace on the right | ![swiperight](images/swiperight.gif)             |
-| Swipe Left               | Move to the workspace on the left  | ![swipeleft](images/swipeleft.gif)               |
-| Swipe Up                 | Increase screen brightness         | ![swipeup](images/swipeup.gif)                   |
-| Swipe Down               | Decrease screen brightness         | ![swipedown](images/swipedown.gif)               |
-| Rotate Clockwise         | Increase volume                    | ![clockwise](images/clockwise.gif)               |
-| Rotate Counter Clockwise | Decrease volume                    | ![counterclockwise](images/counterclockwise.gif) |
-| Grab                     | Screenshot                         | ![grab](images/grab.gif)       |
-| Tap                      | Mode Switch                        | ![tap](images/tap.gif)                           |
+### [Available Gestures](GESTURES.md)
 
 <details>
 <summary><b>Repo Overview</b></summary>
