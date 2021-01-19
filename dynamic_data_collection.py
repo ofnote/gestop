@@ -1,13 +1,13 @@
 '''
-This script receives the hand keypoints detected by mediapipe through
-zmq and then writes them to disk to create a gesture dataset.
+This script receives the hand keypoints detected by the keypoint generator
+and then writes them to disk to create a gesture dataset.
 To be run repeatedly for each gesture.
 '''
 
 import logging
 import os
+import socket
 import threading
-import zmq
 from proto import landmarkList_pb2
 from config import State
 from gesture_receiver import start_key_listener
@@ -18,19 +18,26 @@ def main():
     # using None because arguments are irrelevant
     S = State(None, None)
 
-    # Setting up connection
-    context = zmq.Context()
-    sock = context.socket(zmq.PULL)
-    sock.connect("tcp://127.0.0.1:5556")
+    # setup socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    landmarkList = landmarkList_pb2.LandmarkList()
+    HOST = '127.0.0.1'
+    PORT = 5556
+    sock.bind((HOST, PORT))
+    sock.listen(1)
+
+    landmark_list = landmarkList_pb2.LandmarkList()
+
+    print("Waiting for keypoint generator..")
+    # Establish connection
+    conn, addr = sock.accept()
 
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple description of the gesture you will perform) :\n")
 
     logging.info("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
 
-    path = "data/dynamic_gestures/" + gesture
+    path = "gestop/data/dynamic_gestures/" + gesture
     if not os.path.exists(path):
         os.mkdir(path)
 
@@ -39,13 +46,13 @@ def main():
     keypoint_buffer = []
 
     while True:
-        data = sock.recv()
+        data = conn.recv(4096)
 
         # Start recording data
         if S.ctrl_flag:
-            landmarkList.ParseFromString(data)
+            landmark_list.ParseFromString(data)
             landmarks = []
-            for lmark in landmarkList.landmark:
+            for lmark in landmark_list.landmark:
                 landmarks.extend([str(lmark.x), str(lmark.y), str(lmark.z)])
 
             keypoint_buffer.append(landmarks)
@@ -75,6 +82,9 @@ def main():
 
         if threading.active_count() == 1:
             break
+
+    conn.close()
+    sock.close()
 
 if __name__ == '__main__':
     main()

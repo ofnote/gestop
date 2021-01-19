@@ -32,17 +32,7 @@ def get_screen_resolution():
         import ctypes
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
-@dataclass
-class Config:
-    ''' The configuration of the application. '''
-    if not torch.cuda.is_available():
-        map_location = torch.device('cpu')
-    else:
-        map_location = None
-
-    if not os.path.exists('gestop/logs'):
-        os.mkdir('gestop/logs')
-
+def setup_logger():
     # Set up logger
     logging.basicConfig(
         level=logging.DEBUG,
@@ -55,6 +45,19 @@ class Config:
     )
     # Disabled to prevent debug output by matplotlib
     logging.getLogger('matplotlib.font_manager').disabled = True
+
+@dataclass
+class Config:
+    ''' The configuration of the application. '''
+    if not torch.cuda.is_available():
+        map_location = torch.device('cpu')
+    else:
+        map_location = None
+
+    if not os.path.exists('gestop/logs'):
+        os.mkdir('gestop/logs')
+
+    setup_logger()
 
     # If lite is true, then the neural networks are not loaded into the config
     # This is useful in scripts which do not use the network, or may modify the network.
