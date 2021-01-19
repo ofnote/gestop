@@ -1,13 +1,13 @@
 '''
-This script receives the hand keypoints detected by mediapipe through
-zmq and then writes them to a csv file to create a gesture dataset.
+This script receives the hand keypoints detected by the keypoint generator
+and then writes them to a csv file to create a gesture dataset.
 To be run repeatedly for each gesture
 '''
 
 import logging
-import time
-import zmq
+import socket
 from proto import landmarkList_pb2
+from config import setup_logger
 
 def dataset_headers():
     '''
@@ -41,14 +41,25 @@ def add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED):
 
 def main():
     ''' Main '''
-   
-    # Setting up connection
-    context = zmq.Context()
-    sock = context.socket(zmq.PULL)
-    sock.connect("tcp://127.0.0.1:5556")
 
-    landmarkList = landmarkList_pb2.LandmarkList()
+    # no. of samples added and number of samples being collected
+    ROWS_ADDED = 0
+    NSAMPLES = 1000
 
+    # setup socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    HOST = '127.0.0.1'
+    PORT = 5556
+    sock.bind((HOST, PORT))
+    sock.listen(1)
+
+    landmark_list = landmarkList_pb2.LandmarkList()
+    setup_logger()
+
+    logging.info("Waiting for keypoint generator..")
+    # Establish connection
+    conn, addr = sock.accept()
 
     actual_hand = int(input("Enter the hand for which you are collecting \
     gesture data:\n0) left \t1) right\n"))
@@ -56,14 +67,7 @@ def main():
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple one word description of the orientation of your hand) :\n")
 
-    logging.info("The script will begin executing in 5 seconds. Make sure your hand is in position.")
-    time.sleep(5)
-
-    # no. of samples added and number of samples being collected
-    ROWS_ADDED = 0
-    NSAMPLES = 1000
-
-    f = open("data/static_gestures_data.csv", 'a+')
+    f = open("gestop/data/static_gestures_data.csv", 'a+')
     #set pointer at beginning of file
     f.seek(0)
 
@@ -75,15 +79,15 @@ def main():
         DATASET_STR += dataset_headers()
 
     while ROWS_ADDED < NSAMPLES:
-        data = sock.recv()
+        data = conn.recv(4096)
 
-        landmarkList.ParseFromString(data)
+        landmark_list.ParseFromString(data)
         landmarks = []
-        for lmark in landmarkList.landmark:
+        for lmark in landmark_list.landmark:
             landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
 
         # Handedness - true if right hand, false if left
-        handedness = landmarkList.handedness
+        handedness = landmark_list.handedness
 
         # Add a row to the dataset
         row_str, ROWS_ADDED = add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED)
@@ -92,6 +96,9 @@ def main():
         ROWS_ADDED += 1
         #simple loading bar
         print(str(ROWS_ADDED)+'/'+str(NSAMPLES)+'\t|'+('-'*int((50*ROWS_ADDED)/NSAMPLES))+'>', end='\r')
+
+    conn.close()
+    sock.close()
 
     # Writing data to file at once instead of in for loop for performance reasons.
     f.write(DATASET_STR)
