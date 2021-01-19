@@ -139,7 +139,7 @@ def main():
         verbose=True,
     )
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
                                           name='gesture_net',
                                           project='gestop')
 

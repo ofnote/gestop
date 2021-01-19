@@ -190,14 +190,16 @@ def read_shrec_data():
                     target_arr.append(gesture_no)
         gesture_no += 1
 
-    with open('data/shrec_gesture_mapping.json', 'r') as jsonfile:
+    with open('gestop/data/shrec_gesture_mapping.json', 'r') as jsonfile:
         shrec_dict = json.load(jsonfile)
 
     return gesture_arr, target_arr, shrec_dict
 
 def read_user_data():
     ''' Reads the user collected data. '''
-    base_directory = "data/dynamic_gestures"
+    base_directory = "gestop/data/dynamic_gestures"
+    if not os.path.exists(base_directory):
+        os.mkdir(base_directory)
 
     gesture_arr = []
     target_arr = []
@@ -251,7 +253,7 @@ def main():
     ##################
 
     train_x, test_x, train_y, test_y, gesture_mapping = read_data(C.seed_val)
-    with open('data/dynamic_gesture_mapping.json', 'w') as f:
+    with open('gestop/data/dynamic_gesture_mapping.json', 'w') as f:
         f.write(json.dumps(gesture_mapping))
 
     # Higher order function to pass configuration as argument
@@ -301,7 +303,7 @@ def main():
     if args.exp_name is None:
         args.exp_name = "default"
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
                                           name=args.exp_name,
                                           project='gestop')
 
