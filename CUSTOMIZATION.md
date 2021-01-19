@@ -52,8 +52,8 @@ To extend this application and create new gestures, there are a few prerequisite
 
 You can either record a new static gesture or a dynamic gesture, with the `static_data_collection.py` and `dynamic_data_collection.py` scripts respectively.
 
-To collect data for a new static gesture, run the program, enter the name of the gesture and the hand with which you will be performing the gesture. Run the mediapipe executable and hold the gesture while data is collected. A 1000 samples are collected which should take a minute or two. Hold your hand in the same pose in good lighting to ensure the model gets clean data.
+To collect data for a new static gesture, run the program, enter the name of the gesture and the hand with which you will be performing the gesture. Run the Python or C++ keypoint generators and hold the gesture while data is collected. A 1000 samples are collected which should take a minute or two. Hold your hand in the same pose in good lighting to ensure the model gets clean data.
 
-To collect data for a new dynamic gesture, the process is mostly similar. Run the `dynamic_data_collection.py` program, enter the name of the gesture and run the mediapipe executable. Data is collected only when the Ctrl key is held down, so to collect a single sample, hold the ctrl key, perform the gesture and then release. Repeat this process a few dozen times to collect enough data.
+To collect data for a new dynamic gesture, the process is mostly similar. Run the `dynamic_data_collection.py` program, enter the name of the gesture and run the keypoint generator. Data is collected only when the Ctrl key is held down, so to collect a single sample, hold the Ctrl key, perform the gesture and then release. Repeat this process a few dozen times to collect enough data.
 
 The next step is to retrain the network, using the `static_train_model.py` or the `dynamic_train_model.py` script depending on the new gesture. Finally, add the new gesture-action mapping to the configuration file. And that's it! Your new gesture is now part of gestop. 
