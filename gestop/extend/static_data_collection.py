@@ -81,7 +81,10 @@ def main():
     while ROWS_ADDED < NSAMPLES:
         data = conn.recv(4096)
 
-        landmark_list.ParseFromString(data)
+        try:
+            landmark_list.ParseFromString(data)
+        except google.protobuf.message.DecodeError: # Incorrect data format
+            continue
         landmarks = []
         for lmark in landmark_list.landmark:
             landmarks.append({'x': lmark.x, 'y': lmark.y, 'z': lmark.z})
