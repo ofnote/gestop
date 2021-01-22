@@ -2,7 +2,4 @@ __pycache__
 logs
 dynamic_gestures
 static_gestures_data.csv
-models/
 env/
-data/feature_viz
-feature_viz.py
