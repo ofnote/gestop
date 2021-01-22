@@ -6,7 +6,6 @@ Trains the network and saves it to disk.
 
 import os
 import argparse
-import math
 from functools import partial
 import json
 import numpy as np
@@ -17,8 +16,10 @@ from torchvision import transforms
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from model import ShrecNet, ShrecDataset, init_weights, variable_length_collate
-from config import Config
+
+from ..model import ShrecNet, ShrecDataset, init_weights, variable_length_collate
+from ..config import Config
+from ..util.utils import calc_polar
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''
@@ -90,9 +91,6 @@ def resample_and_jitter(seq):
 
     return seq.float()
 
-def calc_polar(x,y):
-    ''' Calculate the polar form of the Cartesian coordinates x and y. '''
-    return (x**2 + y**2)**0.5, math.atan2(y, x)/math.pi
 
 def format_shrec(C, seq):
     '''

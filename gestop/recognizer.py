@@ -2,10 +2,9 @@
 Functionality to recognize a static/dynamic gesture,
 given a set of keypoints.
 '''
-import math
 import numpy as np
 import torch
-from dynamic_train_model import calc_polar
+from .util.utils import calc_polar
 
 # Using the variable ctrl_flag to detect if the ctrl key is set.
 # Flag set by the Listener Thread (see gesture_receiver.py)

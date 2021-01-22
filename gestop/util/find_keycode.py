@@ -1,5 +1,5 @@
 '''
-Helper script from pynput to figure out keycode of volume/brightness keys
+Helper script from pynput to figure out keycode of special keys. e.g. volume/brightness keys
 '''
 from pynput.keyboard import Key, Listener
 
@@ -15,8 +15,9 @@ def on_release(key):
         # Stop listener
         return False
 
-# Collect events until released
-with Listener(
-        on_press=on_press,
-        on_release=on_release) as listener:
-    listener.join()
+if __name__ == "__main__":
+    # Collect events until released
+    with Listener(
+            on_press=on_press,
+            on_release=on_release) as listener:
+        listener.join()

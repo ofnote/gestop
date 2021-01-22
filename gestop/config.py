@@ -11,8 +11,9 @@ import datetime
 from typing import Dict, List, Tuple
 import torch
 from pynput.mouse import Controller
-from model import GestureNet, ShrecNet
-from user_config import UserConfig
+
+from .model import GestureNet, ShrecNet
+from .user_config import UserConfig
 
 def get_screen_resolution():
     ''' OS independent way of getting screen resolution. Adapted from pyautogui. '''
@@ -33,7 +34,7 @@ def get_screen_resolution():
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
 def setup_logger():
-    # Set up logger
+    ''' Set up logger '''
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",

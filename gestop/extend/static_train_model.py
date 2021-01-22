@@ -12,8 +12,8 @@ from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from model import GestureNet, GestureDataset
-from config import Config
+from ..model import GestureNet, GestureDataset
+from ..config import Config
 
 def init_seed(seed):
     ''' Initializes random seeds for reproducibility '''

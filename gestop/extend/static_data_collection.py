@@ -6,8 +6,8 @@ To be run repeatedly for each gesture
 
 import logging
 import socket
-from proto import landmarkList_pb2
-from config import setup_logger
+from ..proto import landmarkList_pb2
+from ..config import setup_logger
 
 def dataset_headers():
     '''
