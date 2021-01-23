@@ -4,7 +4,13 @@ Various Utility Functions
 
 import math
 from functools import partial
+import logging
+import json
 from pynput.keyboard import Listener, Key
+from sklearn.preprocessing import LabelEncoder
+import pandas as pd
+import numpy as np
+import torch
 
 def calc_polar(x,y):
     ''' Calculate the polar form of the Cartesian coordinates x and y. '''
@@ -36,3 +42,26 @@ def start_key_listener(S):
     listener = Listener(on_press=on_press_key,
                         on_release=on_release_key)
     listener.start()
+
+def update_static_mapping():
+    '''
+    Fit the LabelEncoder on static gesture data and write mapping to disk
+    '''
+    data = pd.read_csv("gestop/data/static_gestures_data.csv")
+    data = data['GESTURE']
+    le = LabelEncoder()
+    le.fit(data)
+
+    # Store mapping to disk
+    le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
+    logging.info(le_name_mapping)
+    with open('gestop/data/static_gesture_mapping.json', 'w') as f:
+        f.write(json.dumps(le_name_mapping))
+
+    return le
+
+def init_seed(seed):
+    ''' Initializes random seeds for reproducibility '''
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
