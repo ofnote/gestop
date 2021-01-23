@@ -1,8 +1,8 @@
 '''
 Contains the declaration of the neural network(s)
 and their corresponding datasets.
-GestureNet -> A simple FFN to classify static gestures
-ShrecNet -> A GRU network which classifies dynamic gestures with data from SHREC
+StaticNet -> A simple FFN to classify static gestures
+DynamicNet -> A GRU network which classifies dynamic gestures
 '''
 
 import time
@@ -15,12 +15,12 @@ from pytorch_lightning.core.lightning import LightningModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 import matplotlib.pyplot as plt
 
-class GestureNet(LightningModule):
+class StaticNet(LightningModule):
     '''
     The implementation of the model which recognizes static gestures given the hand keypoints.
     '''
     def __init__(self, input_dim, output_classes, gesture_mapping):
-        super(GestureNet, self).__init__()
+        super(StaticNet, self).__init__()
 
         self.gesture_mapping = gesture_mapping
         self.fc1 = nn.Linear(input_dim, 64)
@@ -99,8 +99,8 @@ class GestureNet(LightningModule):
 
         return metrics
 
-class GestureDataset(Dataset):
-    ''' Implementation of a GestureDataset which is then loaded into torch's DataLoader'''
+class StaticDataset(Dataset):
+    ''' Implementation of a StaticDataset which is then loaded into torch's DataLoader'''
     def __init__(self, input_data, target):
         self.input_data = input_data
         self.target = target
@@ -111,14 +111,14 @@ class GestureDataset(Dataset):
     def __getitem__(self, index):
         return (self.input_data[index], self.target[index])
 
-class ShrecNet(LightningModule):
+class DynamicNet(LightningModule):
     '''
     The implementation of the model which recognizes dynamic hand gestures
     given a sequence of keypoints. Consists of a bidirectional GRU connected
     on both sides to a fully conncted layer.
     '''
     def __init__(self, input_dim, output_classes, gesture_mapping):
-        super(ShrecNet, self).__init__()
+        super(DynamicNet, self).__init__()
 
         self.hidden_dim1 = 128
         self.hidden_dim2 = 64
@@ -131,9 +131,9 @@ class ShrecNet(LightningModule):
         self.epoch_time = []
         self.gesture_mapping = gesture_mapping
 
-    def replace_layers(self, new_output_classes):
+    def replace_last_layer(self, new_output_classes):
         ''' Replacing last layer to learn with new gestures. '''
-        self.fc2 = nn.Linear(self.hidden_dim, new_output_classes)
+        self.fc2 = nn.Linear(self.hidden_dim2*2, new_output_classes)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
@@ -249,9 +249,9 @@ def variable_length_collate(batch):
         target[i] = tar
     return data, target, data_lengths
 
-class ShrecDataset(Dataset):
+class DynamicDataset(Dataset):
     '''
-    Implementation of a ShrecDataset which stores both SHREC and user data and
+    Implementation of a DynamicDataset which stores both SHREC and user data and
     formats it as required by the network during training.
     '''
     def __init__(self, input_data, target, shrec_transform, user_transform):
