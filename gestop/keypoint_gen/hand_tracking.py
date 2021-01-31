@@ -22,7 +22,7 @@ except:
 
 # For webcam input:
 hands = mp_hands.Hands(
-    min_detection_confidence=0.7, min_tracking_confidence=0.5)
+    min_detection_confidence=0.4, min_tracking_confidence=0.4)
 cap = cv2.VideoCapture(0)
 while cap.isOpened():
     success, image = cap.read()
