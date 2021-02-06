@@ -1,6 +1,5 @@
 '''
-Contains the declaration of the neural network(s)
-and their corresponding datasets.
+Contains the declaration of the neural networks
 StaticNet -> A simple FFN to classify static gestures
 DynamicNet -> A GRU network which classifies dynamic gestures
 '''
@@ -9,7 +8,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from pytorch_lightning.core.lightning import LightningModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
@@ -98,18 +96,6 @@ class StaticNet(LightningModule):
         self.logger.log_metrics(report)
 
         return metrics
-
-class StaticDataset(Dataset):
-    ''' Implementation of a StaticDataset which is then loaded into torch's DataLoader'''
-    def __init__(self, input_data, target):
-        self.input_data = input_data
-        self.target = target
-
-    def __len__(self):
-        return len(self.input_data)
-
-    def __getitem__(self, index):
-        return (self.input_data[index], self.target[index])
 
 class DynamicNet(LightningModule):
     '''
@@ -248,24 +234,3 @@ def variable_length_collate(batch):
         data_lengths[i] = inp.shape[0]
         target[i] = tar
     return data, target, data_lengths
-
-class DynamicDataset(Dataset):
-    '''
-    Implementation of a DynamicDataset which stores both SHREC and user data and
-    formats it as required by the network during training.
-    '''
-    def __init__(self, input_data, target, shrec_transform, user_transform):
-        self.input_data = input_data
-        self.target = target
-        self.shrec_transform = shrec_transform
-        self.user_transform = user_transform
-
-    def __len__(self):
-        return len(self.input_data)
-
-    def __getitem__(self, index):
-        if self.input_data[index].shape[1] == 44: #SHREC
-            x = self.shrec_transform(self.input_data[index])
-        else:
-            x = self.user_transform(self.input_data[index])
-        return (x, self.target[index])

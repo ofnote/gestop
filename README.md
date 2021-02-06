@@ -1,4 +1,7 @@
-# gestop
+# Gestop : Customizable Gesture Control of Computer Systems
+
+This is the implementation of the approach described in the paper:
+> Sriram Krishna and Nishant Sinha. [Gestop: Customizable Gesture Control of Computer Systems](https://arxiv.org/abs/2010.13197) 8th ACM IKDD CODS and 26th COMAD. 2021. 405-409.
 
 Built on top of [mediapipe](https://github.com/google/mediapipe), this project aims to be a tool to interact with a computer through hand gestures. Out of the box, using this tool, it is possible to:
 
@@ -13,9 +16,7 @@ In addition, it is possible to extend and customize the functionality of the app
 
 ### [Demo video link](https://www.youtube.com/watch?v=K2UkIjK7BTI&t=19s)
 
-#### [Accepted at the 8th ACM IKDD CODS and 26th COMAD (CODS-COMAD '21)](https://arxiv.org/abs/2010.13197)
-
-#### [Dataset link](https://drive.google.com/drive/folders/1zMFQVKvpAhU-EKGxQNyFXKTu1TgBH23L?usp=sharing)
+### [Static and Dynamic Gestures Dataset link](https://drive.google.com/drive/folders/1zMFQVKvpAhU-EKGxQNyFXKTu1TgBH23L?usp=sharing)
 
 ### Usage
 

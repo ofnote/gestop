@@ -10,7 +10,8 @@ from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from ..model import StaticNet, StaticDataset
+from ..model import StaticNet
+from ..dataset import StaticDataset
 from ..config import Config, get_seed
 from ..util.utils import update_static_mapping, init_seed
 

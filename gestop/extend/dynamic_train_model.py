@@ -17,7 +17,8 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
 
-from ..model import DynamicNet, DynamicDataset, init_weights, variable_length_collate
+from ..model import DynamicNet, init_weights, variable_length_collate
+from ..dataset import DynamicDataset
 from ..config import Config, get_seed
 from ..util.utils import calc_polar, init_seed
 
