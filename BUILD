@@ -27,7 +27,7 @@ cc_proto_library(
 
 proto_library(
     name = "landmarkList_proto",
-    srcs = ["proto/landmarkList.proto"],
+    srcs = ["gestop/proto/landmarkList.proto"],
 )
 
 
@@ -37,7 +37,7 @@ proto_library(
 # (or similar nvidia/amd equivalent)
 cc_library(
     name = "hand_tracking_landmarks",
-    srcs = ["keypoint_gen/hand_tracking_landmarks.cc"],
+    srcs = ["gestop/keypoint_gen/hand_tracking_landmarks.cc"],
     deps = [
         ":landmarkList_cc_proto",
         "//mediapipe/framework/formats:landmark_cc_proto",
@@ -61,7 +61,7 @@ cc_library(
 
 cc_library(
     name = "hand_tracking_landmarks_cpu",
-    srcs = ["keypoint_gen/hand_tracking_landmarks_cpu.cc"],
+    srcs = ["gestop/keypoint_gen/hand_tracking_landmarks_cpu.cc"],
     deps = [
         ":landmarkList_cc_proto",
         "//mediapipe/framework/formats:landmark_cc_proto",

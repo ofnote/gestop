@@ -58,7 +58,7 @@ python -m gestop.keypoint_gen.hand_tracking
 ``` sh
 bazel build -c opt --verbose_failures --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11 gestop:hand_tracking_gpu
 
-GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/keypoint_gen/hand_tracking_desktop_live.pbtxt
+GLOG_logtostderr=1 bazel-bin/gestop/hand_tracking_gpu --calculator_graph_config_file=gestop/gestop/keypoint_gen/hand_tracking_desktop_live.pbtxt
 ```
 
 ###### CPU
