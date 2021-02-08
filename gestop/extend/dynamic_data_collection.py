@@ -8,9 +8,9 @@ import logging
 import os
 import socket
 import threading
-from proto import landmarkList_pb2
-from config import State
-from gesture_receiver import start_key_listener
+from ..proto import landmarkList_pb2
+from ..config import State
+from ..util.utils import start_key_listener
 
 def main():
     ''' Main '''

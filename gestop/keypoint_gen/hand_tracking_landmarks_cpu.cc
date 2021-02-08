@@ -13,9 +13,9 @@
 // limitations under the License.
 //
 // An example of sending OpenCV webcam frames into a MediaPipe graph.
-// This example requires a linux computer and a GPU with EGL support drivers.
 #include <cstdlib>
 #include <string>
+
 
 #include <stdio.h> 
 #include <sys/socket.h> 
@@ -33,13 +33,10 @@
 #include "mediapipe/framework/port/opencv_video_inc.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipe/gpu/gl_calculator_helper.h"
-#include "mediapipe/gpu/gpu_buffer.h"
-#include "mediapipe/gpu/gpu_shared_data_internal.h"
 
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
-#include "gestop/proto/landmarkList.pb.h"
+#include "gestop/gestop/proto/landmarkList.pb.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "output_video";
@@ -65,38 +62,40 @@ DEFINE_string(output_video_path, "",
 #endif
 
 
+
 int connect_to_server() {
-    int sock = 0, valread;
+    int sock = 0, valread; 
     struct sockaddr_in serv_addr;
     printf("%s", SERVER_IP);
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)
-    {
-        printf("\nInvalid address/ Address not supported \n");
-        return -1;
-    }
-
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-        printf("\nServer Connection Failed \n");
-        return -1;
-    }
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+    
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(PORT); 
+       
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr)<=0)  
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1; 
+    } 
+   
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nServer Connection Failed \n"); 
+        return -1; 
+    } 
     else {
         printf("\n** Server Connected **\n");
     }
 
     return sock;
 }
+
 
 ::mediapipe::Status RunMPPGraph() {
   std::string calculator_graph_config_contents;
@@ -111,12 +110,6 @@ int connect_to_server() {
   LOG(INFO) << "Initialize the calculator graph.";
   mediapipe::CalculatorGraph graph;
   MP_RETURN_IF_ERROR(graph.Initialize(config));
-
-  LOG(INFO) << "Initialize the GPU.";
-  ASSIGN_OR_RETURN(auto gpu_resources, mediapipe::GpuResources::Create());
-  MP_RETURN_IF_ERROR(graph.SetGpuResources(std::move(gpu_resources)));
-  mediapipe::GlCalculatorHelper gpu_helper;
-  gpu_helper.InitializeForTest(graph.GetGpuResources().get());
 
   LOG(INFO) << "Initialize the camera or load the video.";
   cv::VideoCapture capture;
@@ -169,27 +162,16 @@ int connect_to_server() {
     // Wrap Mat into an ImageFrame.
     auto input_frame = absl::make_unique<mediapipe::ImageFrame>(
         mediapipe::ImageFormat::SRGB, camera_frame.cols, camera_frame.rows,
-        mediapipe::ImageFrame::kGlDefaultAlignmentBoundary);
+        mediapipe::ImageFrame::kDefaultAlignmentBoundary);
     cv::Mat input_frame_mat = mediapipe::formats::MatView(input_frame.get());
     camera_frame.copyTo(input_frame_mat);
 
-    // Prepare and add graph input packet.
+    // Send image packet into the graph.
     size_t frame_timestamp_us =
         (double)cv::getTickCount() / (double)cv::getTickFrequency() * 1e6;
-    MP_RETURN_IF_ERROR(
-        gpu_helper.RunInGlContext([&input_frame, &frame_timestamp_us, &graph,
-                                   &gpu_helper]() -> ::mediapipe::Status {
-          // Convert ImageFrame to GpuBuffer.
-          auto texture = gpu_helper.CreateSourceTexture(*input_frame.get());
-          auto gpu_frame = texture.GetFrame<mediapipe::GpuBuffer>();
-          glFlush();
-          texture.Release();
-          // Send GPU image packet into the graph.
-          MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
-              kInputStream, mediapipe::Adopt(gpu_frame.release())
-                                .At(mediapipe::Timestamp(frame_timestamp_us))));
-          return ::mediapipe::OkStatus();
-        }));
+    MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
+        kInputStream, mediapipe::Adopt(input_frame.release())
+                          .At(mediapipe::Timestamp(frame_timestamp_us))));
 
     // Get the graph result packet, or stop if that fails.
     mediapipe::Packet packet;
@@ -200,7 +182,7 @@ int connect_to_server() {
     if (!poller_landmark.Next(&landmark_packet)) break;
     if (!poller_handedness.Next(&handedness_packet)) break;
     if (!poller_presence.Next(&presence_packet)) continue;
-    std::unique_ptr<mediapipe::ImageFrame> output_frame;
+    auto& output_frame = packet.Get<mediapipe::ImageFrame>();
 
     auto& output_landmarks = landmark_packet.Get<::mediapipe::NormalizedLandmarkList>();
     auto& output_handedness = handedness_packet.Get<mediapipe::ClassificationList>();
@@ -215,8 +197,8 @@ int connect_to_server() {
           hand_tracking::LandmarkList::Landmark*  l = landmarks.add_landmark();
           l->set_x(output_landmarks.landmark(i).x());
           l->set_y(output_landmarks.landmark(i).y());
-          l->set_z(output_landmarks.landmark(i).z()*IMAGE_WIDTH);
-          // std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";
+          l->set_z(output_landmarks.landmark(i).z()*256);
+          //std::cout << "Landmark number: "<< i << "   x coordinate: " << l->x() << "   y coordinate: " << l->y() << "  z coordinate: " << l->z() << "\n";  
     }
     // std::cout << "\n\n\n-----------------------------------------------------\n\n\n";
     std::string output;
@@ -225,44 +207,8 @@ int connect_to_server() {
     if (hand_presence > 0.9)
       send(sock, output.c_str(), output.size(), 0);
 
-/*
-    // Landmark 8 is tip of index finger
-    float index_pointer_x = output_landmarks.landmark(8).x();
-    float index_pointer_y = output_landmarks.landmark(8).y();
-    
-    // Hardocded resolution
-    int screen_width = 3840;
-    int screen_height = 2160;
-
-    int scaled_pointer_x = index_pointer_x * screen_width;
-    int scaled_pointer_y = index_pointer_y * screen_height;
-
-    std::cout << "Scaled Cursor position : " << scaled_pointer_x << "," << scaled_pointer_y <<"\n";    
-
-    std::string cmd = "xdotool mousemove " + std::to_string(scaled_pointer_x) + " " + std::to_string(scaled_pointer_y);
-    system(cmd.c_str());
-*/
-    // Convert GpuBuffer to ImageFrame.
-    MP_RETURN_IF_ERROR(gpu_helper.RunInGlContext(
-        [&packet, &output_frame, &gpu_helper]() -> ::mediapipe::Status {
-          auto& gpu_frame = packet.Get<mediapipe::GpuBuffer>();
-          auto texture = gpu_helper.CreateSourceTexture(gpu_frame);
-          output_frame = absl::make_unique<mediapipe::ImageFrame>(
-              mediapipe::ImageFormatForGpuBufferFormat(gpu_frame.format()),
-              gpu_frame.width(), gpu_frame.height(),
-              mediapipe::ImageFrame::kGlDefaultAlignmentBoundary);
-          gpu_helper.BindFramebuffer(texture);
-          const auto info =
-              mediapipe::GlTextureInfoForGpuBufferFormat(gpu_frame.format(), 0);
-          glReadPixels(0, 0, texture.width(), texture.height(), info.gl_format,
-                       info.gl_type, output_frame->MutablePixelData());
-          glFlush();
-          texture.Release();
-          return ::mediapipe::OkStatus();
-        }));
-
     // Convert back to opencv for display or saving.
-    cv::Mat output_frame_mat = mediapipe::formats::MatView(output_frame.get());
+    cv::Mat output_frame_mat = mediapipe::formats::MatView(&output_frame);
     cv::cvtColor(output_frame_mat, output_frame_mat, cv::COLOR_RGB2BGR);
     if (save_video) {
       if (!writer.isOpened()) {
