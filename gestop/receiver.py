@@ -3,7 +3,6 @@ Receives the data from mediapipe.
 Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
-import threading
 import argparse
 import logging
 
@@ -99,22 +98,20 @@ def handle_stream(args):
     sock.bind((HOST, PORT))
     sock.listen(1)
 
-    while True:
-        # Establish connection
-        conn, addr = sock.accept()
-        while True:
-            data = conn.recv(4096)
-            try:
-                process_data(data, landmark_list, C, S)
-            except ValueError as v:
-                print(v)
-                print("Closing Connection")
-                break
-            # The key listener thread has shut down, leaving only MainThread
-            if threading.active_count() == 1:
-                break
-        conn.close()
-    sock.close()
+    try:
+        while True: # Run server
+            conn, addr = sock.accept()
+            while True: # While connection is open
+                data = conn.recv(4096)
+                try:
+                    process_data(data, landmark_list, C, S)
+                except ValueError as v:
+                    print("Closing Connection: ", v)
+                    break
+            conn.close()
+        sock.close()
+    except KeyboardInterrupt:
+        print("\nGracefully shutting down")
 
 if __name__ == "__main__":
     # Program runs on two threads

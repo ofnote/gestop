@@ -16,8 +16,8 @@ HOST = '127.0.0.1'
 PORT = 5556
 try:
     sock.connect((HOST, PORT))
-except:
-    print("Server Connection Failed")
+except Exception as e:
+    print("Server Connection Failed ", e)
     exit(0)
 
 # For webcam input:

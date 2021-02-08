@@ -18,18 +18,13 @@ def calc_polar(x,y):
 
 def on_press(S, key):
     ''' Tracks keypresses. Sets ctrl_flag if the ctrl key is pressed.'''
-    # print('{0} pressed'.format(key))
     if key == Key.ctrl:
         S.ctrl_flag = True
 
 def on_release(S, key):
     ''' Tracks keypresses. Unsets ctrl_flag if the ctrl key is released.'''
-    # print('{0} release'.format(key))
     if key == Key.ctrl:
         S.ctrl_flag = False
-    if key == Key.esc:
-        # Stop listener
-        return False
 
 def start_key_listener(S):
     ''' Starts the keypress listener. '''
