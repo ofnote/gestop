@@ -6,7 +6,6 @@ Trains the network and saves it to disk.
 
 import os
 import argparse
-import math
 from functools import partial
 import json
 import numpy as np
@@ -17,15 +16,11 @@ from torchvision import transforms
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from model import ShrecNet, ShrecDataset, init_weights, variable_length_collate
-from config import Config
 
-def init_seed(seed):
-    ''' Initializes random seeds for reproducibility '''
-    seed_everything(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+from ..model import DynamicNet, init_weights, variable_length_collate
+from ..dataset import DynamicDataset
+from ..config import Config, get_seed
+from ..util.utils import calc_polar, init_seed
 
 def normalize(seq):
     '''
@@ -90,9 +85,6 @@ def resample_and_jitter(seq):
 
     return seq.float()
 
-def calc_polar(x,y):
-    ''' Calculate the polar form of the Cartesian coordinates x and y. '''
-    return (x**2 + y**2)**0.5, math.atan2(y, x)/math.pi
 
 def format_shrec(C, seq):
     '''
@@ -171,10 +163,8 @@ def construct_seq(C, seq):
     return new_seq
 
 
-def read_shrec_data():
+def read_shrec_data(base_directory):
     ''' Reads data from SHREC2017 dataset files. '''
-    # Change this as per your system
-    base_directory = "/home/sriramsk/Desktop/HandGestureDataset_SHREC2017"
 
     gesture_dir = ['gesture_'+str(i) for i in range(1, 15)]
     gesture_arr = []
@@ -216,9 +206,9 @@ def read_user_data():
 
     return gesture_arr, target_arr, user_dict
 
-def read_data(seed_val):
+def read_data(seed_val, base_directory):
     ''' Read both user data and SHREC data. '''
-    gesture_shrec, target_shrec, shrec_dict = read_shrec_data()
+    gesture_shrec, target_shrec, shrec_dict = read_shrec_data(base_directory)
     gesture_user, target_user, user_dict = read_user_data()
 
     shrec_dict.update(user_dict)
@@ -242,19 +232,25 @@ def main():
     parser = argparse.ArgumentParser(description='A program to train a neural network \
     to recognize dynamic hand gestures.')
     parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
+    parser.add_argument("--shrec-directory", help="The directory of SHREC.", required=True)
+    parser.add_argument("--use-pretrained", help="Use pretrained model.",
+                        dest="pretrained", action="store_true")
 
     args = parser.parse_args()
-
-    C = Config(lite=True, pretrained=False)
-    init_seed(C.seed_val)
+    init_seed(get_seed())
 
     ##################
     # INPUT PIPELINE #
     ##################
 
-    train_x, test_x, train_y, test_y, gesture_mapping = read_data(C.seed_val)
+    with open('gestop/data/dynamic_gesture_mapping.json', 'r') as f:
+        old_gesture_mapping = json.load(f) # Keep old mapping in case we pretrain
+        old_output_classes = len(old_gesture_mapping)
+    train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory)
     with open('gestop/data/dynamic_gesture_mapping.json', 'w') as f:
-        f.write(json.dumps(gesture_mapping))
+        f.write(json.dumps(gesture_mapping)) # Store new mapping
+
+    C = Config(lite=True)
 
     # Higher order function to pass configuration as argument
     shrec_to_mediapipe = partial(format_shrec, C)
@@ -274,10 +270,10 @@ def main():
         transforms.Lambda(user_to_mediapipe),
     ])
 
-    train_loader = DataLoader(ShrecDataset(train_x, train_y, shrec_transform, user_transform),
+    train_loader = DataLoader(DynamicDataset(train_x, train_y, shrec_transform, user_transform),
                               num_workers=10, batch_size=C.dynamic_batch_size,
                               collate_fn=choose_collate(variable_length_collate, C))
-    val_loader = DataLoader(ShrecDataset(test_x, test_y, shrec_transform, user_transform),
+    val_loader = DataLoader(DynamicDataset(test_x, test_y, shrec_transform, user_transform),
                             num_workers=10, batch_size=C.dynamic_batch_size,
                             collate_fn=choose_collate(variable_length_collate, C))
 
@@ -285,13 +281,14 @@ def main():
     # TRAINING #
     ############
 
-    # Use pretrained SHREC model
-    if C.pretrained:
-        model = ShrecNet(C.dynamic_input_dim, C.shrec_output_classes, gesture_mapping)
-        model.load_state_dict(torch.load(C.shrec_path))
-        model.replace_layers(C.dynamic_output_classes)
+    # Use pretrained model
+    if args.pretrained:
+        model = DynamicNet(C.dynamic_input_dim, old_output_classes, old_gesture_mapping)
+        model.load_state_dict(torch.load(C.dynamic_path))
+        model.replace_last_layer(C.dynamic_output_classes)
+        model.gesture_mapping = gesture_mapping
     else:
-        model = ShrecNet(C.dynamic_input_dim, C.dynamic_output_classes, gesture_mapping)
+        model = DynamicNet(C.dynamic_input_dim, C.dynamic_output_classes, gesture_mapping)
         model.apply(init_weights)
 
     early_stopping = EarlyStopping(

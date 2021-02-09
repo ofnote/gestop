@@ -1,8 +1,6 @@
 '''
 Describes the implementation of the training procedure for gesture net
 '''
-import json
-import logging
 import torch
 import pandas as pd
 import numpy as np
@@ -12,14 +10,10 @@ from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
-from model import GestureNet, GestureDataset
-from config import Config
-
-def init_seed(seed):
-    ''' Initializes random seeds for reproducibility '''
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+from ..model import StaticNet
+from ..dataset import StaticDataset
+from ..config import Config, get_seed
+from ..util.utils import update_static_mapping, init_seed
 
 def split_dataframe(data):
     ''' Splits the given dataset into input and target data. '''
@@ -36,7 +30,7 @@ def format_and_load(dataset, target, batchsize):
     formatted_data = torch.tensor(make_vector(dataset))
     formatted_target = torch.tensor(target)
 
-    loaded_data = DataLoader(GestureDataset(formatted_data, formatted_target),
+    loaded_data = DataLoader(StaticDataset(formatted_data, formatted_target),
                              batch_size=batchsize, num_workers=10)
     return loaded_data
 
@@ -99,8 +93,9 @@ def calc_accuracy(ans, pred):
 def main():
     ''' Main '''
 
+    encoder = update_static_mapping() # Update the static mapping before initializing Config
     C = Config(lite=True)
-    init_seed(C.seed_val)
+    init_seed(get_seed())
 
     ##################
     # INPUT PIPELINE #
@@ -108,7 +103,7 @@ def main():
 
     # Read and format the csv
     df = pd.read_csv("gestop/data/static_gestures_data.csv")
-    train, test = train_test_split(df, test_size=0.1, random_state=C.seed_val)
+    train, test = train_test_split(df, test_size=0.1, random_state=get_seed())
     train_X, train_Y = split_dataframe(train)
     test_X, test_Y = split_dataframe(test)
 
@@ -116,23 +111,13 @@ def main():
     train_Y = np.array(train_Y)
     test_Y = np.array(test_Y)
 
-    le = LabelEncoder()
-    le.fit(train_Y)
-
-    # Store encoding to disk
-    le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
-    logging.info(le_name_mapping)
-    with open('gestop/data/static_gesture_mapping.json', 'w') as f:
-        f.write(json.dumps(le_name_mapping))
-
-
-    train_Y = le.transform(train_Y)
-    test_Y = le.transform(test_Y)
+    train_Y = encoder.transform(train_Y)
+    test_Y = encoder.transform(test_Y)
 
     train_loader = format_and_load(train_X, train_Y, C.static_batch_size)
     test_loader = format_and_load(test_X, test_Y, C.static_batch_size)
 
-    gesture_net = GestureNet(C.static_input_dim, C.static_output_classes, C.static_gesture_mapping)
+    static_net = StaticNet(C.static_input_dim, C.static_output_classes, C.static_gesture_mapping)
 
     early_stopping = EarlyStopping(
         patience=3,
@@ -140,7 +125,7 @@ def main():
     )
 
     wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
-                                          name='gesture_net',
+                                          name='static_net',
                                           project='gestop')
 
     trainer = Trainer(gpus=1,
@@ -148,15 +133,14 @@ def main():
                       logger=wandb_logger,
                       min_epochs=C.min_epochs,
                       early_stop_callback=early_stopping)
-    trainer.fit(gesture_net, train_loader, test_loader)
-    # gesture_net.load_state_dict(torch.load(PATH))
-    trainer.test(gesture_net, test_dataloaders=test_loader)
+    trainer.fit(static_net, train_loader, test_loader)
+    trainer.test(static_net, test_dataloaders=test_loader)
 
     ################
     # SAVING MODEL #
     ################
 
-    torch.save(gesture_net.state_dict(), C.static_path)
+    torch.save(static_net.state_dict(), C.static_path)
 
 
 if __name__ == '__main__':

@@ -11,8 +11,9 @@ import datetime
 from typing import Dict, List, Tuple
 import torch
 from pynput.mouse import Controller
-from model import GestureNet, ShrecNet
-from user_config import UserConfig
+
+from .model import StaticNet, DynamicNet
+from .user_config import UserConfig
 
 def get_screen_resolution():
     ''' OS independent way of getting screen resolution. Adapted from pyautogui. '''
@@ -33,7 +34,7 @@ def get_screen_resolution():
         return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 
 def setup_logger():
-    # Set up logger
+    ''' Set up logger '''
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -45,6 +46,10 @@ def setup_logger():
     )
     # Disabled to prevent debug output by matplotlib
     logging.getLogger('matplotlib.font_manager').disabled = True
+
+def get_seed():
+    ''' Seed value for reproducibility '''
+    return 42
 
 @dataclass
 class Config:
@@ -66,25 +71,20 @@ class Config:
     # Path to action configuration file
     config_path: str = 'gestop/data/action_config.json'
 
-    # Seed value for reproducibility
-    seed_val: int = 42
-
     # Refer make_vector() in train_model.py to verify input dimensions
     static_input_dim: int = 49
-    static_output_classes: int = 7
+    static_output_classes: int = 0 # see __post_init__
 
     # Refer format_mediapipe() in dynamic_train_model.py to verify input dimensions
     dynamic_input_dim: int = 36
-    dynamic_output_classes: int = 15
-    shrec_output_classes: int = 14
+    shrec_output_classes: int = 14 # Number of gestures in SHREC
+    dynamic_output_classes: int = 0 # see __post_init__
 
     # Minimum number of epochs
     min_epochs: int = 15
 
     static_batch_size: int = 64
     dynamic_batch_size: int = 1
-
-    pretrained: bool = True
 
     # value for pytorch-lighting trainer attribute accumulate_grad_batches
     grad_accum: int = 2
@@ -98,12 +98,11 @@ class Config:
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)
 
-    static_path: str = 'gestop/models/gesture_net.pth'
-    shrec_path: str = 'gestop/models/shrec_net.pth'
-    dynamic_path: str = 'gestop/models/user_net.pth'
+    static_path: str = 'gestop/models/static_net.pth'
+    dynamic_path: str = 'gestop/models/dynamic_net.pth'
 
-    gesture_net: GestureNet = field(init=False)
-    shrec_net: ShrecNet = field(init=False)
+    static_net: StaticNet = field(init=False)
+    dynamic_net: DynamicNet = field(init=False)
 
     # Mouse tracking
     mouse: Controller = field(init=False)
@@ -123,8 +122,10 @@ class Config:
         # Fetching gesture mappings
         with open('gestop/data/static_gesture_mapping.json', 'r') as jsonfile:
             self.static_gesture_mapping = json.load(jsonfile)
+            self.static_output_classes = len(self.static_gesture_mapping)
         with open('gestop/data/dynamic_gesture_mapping.json', 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)
+            self.dynamic_output_classes = len(self.dynamic_gesture_mapping)
 
         with open(self.config_path, 'r') as jsonfile:
             self.gesture_action_mapping = json.load(jsonfile)
@@ -134,20 +135,20 @@ class Config:
 
         # Setting up networks
         if not self.lite:
-            logging.info('Loading GestureNet...')
-            self.gesture_net = GestureNet(self.static_input_dim, self.static_output_classes,
+            logging.info('Loading StaticNet...')
+            self.static_net = StaticNet(self.static_input_dim, self.static_output_classes,
                                           self.static_gesture_mapping)
-            self.gesture_net.load_state_dict(torch.load(self.static_path,
+            self.static_net.load_state_dict(torch.load(self.static_path,
                                                         map_location=self.map_location))
-            self.gesture_net.eval()
+            self.static_net.eval()
 
-            logging.info('Loading ShrecNet..')
+            logging.info('Loading DynamicNet...')
 
-            self.shrec_net = ShrecNet(self.dynamic_input_dim, self.dynamic_output_classes,
+            self.dynamic_net = DynamicNet(self.dynamic_input_dim, self.dynamic_output_classes,
                                       self.dynamic_gesture_mapping)
-            self.shrec_net.load_state_dict(torch.load(self.dynamic_path,
+            self.dynamic_net.load_state_dict(torch.load(self.dynamic_path,
                                                       map_location=self.map_location))
-            self.shrec_net.eval()
+            self.dynamic_net.eval()
 
 @dataclass
 class State:

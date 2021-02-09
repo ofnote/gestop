@@ -2,10 +2,9 @@
 Functionality to recognize a static/dynamic gesture,
 given a set of keypoints.
 '''
-import math
 import numpy as np
 import torch
-from dynamic_train_model import calc_polar
+from .util.utils import calc_polar
 
 # Using the variable ctrl_flag to detect if the ctrl key is set.
 # Flag set by the Listener Thread (see gesture_receiver.py)
@@ -32,7 +31,7 @@ def format_landmark(landmark, hand, C, S):
 
 def format_static_landmark(landmark, hand, input_dim):
     '''
-    Formats the input keypoints into the format expected by GestureNet.
+    Formats the input keypoints into the format expected by StaticNet.
     Refer make_vector in static_train_model.py for more details
     '''
     formatted_landmark = np.empty((input_dim))
@@ -123,11 +122,11 @@ def get_gesture(landmarks, C, S):
 
 def get_static_gesture(landmarks, C):
     '''
-    Uses GestureNet to classify the keypoints into a gesture.
+    Uses StaticNet to classify the keypoints into a gesture.
     Also decides if a 'bad gesture' was performed.
     '''
     landmarks = torch.tensor(landmarks, dtype=torch.float32)
-    out = C.gesture_net(landmarks)
+    out = C.static_net(landmarks)
     #print(dict(zip(mapping.values(), softmax(out.detach().numpy()))))
     gesture_dict = dict(zip(C.static_gesture_mapping.values(), out.detach().numpy()))
     # doubling the likelihood of the bad gesture to lower chances of misclassification
@@ -161,7 +160,7 @@ def dynamic_gesture_detection(C, S):
 
     # Formatting network input
     x = torch.unsqueeze(torch.stack(S.keypoint_buffer), 0)
-    out = C.shrec_net(x.float())
+    out = C.dynamic_net(x.float())
     gesture_dict = dict(zip(C.dynamic_gesture_mapping.values(), out[0].detach().numpy()))
 
     gesture = max(gesture_dict, key=gesture_dict.get)

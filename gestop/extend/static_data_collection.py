@@ -6,8 +6,9 @@ To be run repeatedly for each gesture
 
 import logging
 import socket
-from proto import landmarkList_pb2
-from config import setup_logger
+from ..proto import landmarkList_pb2
+from ..config import setup_logger
+from ..util.utils import update_static_mapping
 
 def dataset_headers():
     '''
@@ -37,7 +38,6 @@ def add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED):
 
         row_str += str(handedness)+','+gesture+'\n'
     return row_str, ROWS_ADDED
-
 
 def main():
     ''' Main '''
@@ -108,6 +108,7 @@ def main():
     f.close()
     logging.info("1000 rows of data has been successfully collected.")
 
+    update_static_mapping()
 
 if __name__ =='__main__':
     main()

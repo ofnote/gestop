@@ -3,47 +3,17 @@ Receives the data from mediapipe.
 Interfaces with the gesture recognizer and the gesture executor modules.
 '''
 
-import threading
-from functools import partial
 import argparse
 import logging
 
 import socket
-from pynput.keyboard import Listener, Key
 
-from proto import landmarkList_pb2
-from config import Config, State
-from mouse_tracker import mouse_track, calc_pointer
-from gesture_recognizer import format_landmark, get_gesture
-from gesture_executor import pose_action
-
-
-def on_press(S, key):
-    ''' Tracks keypresses. Sets ctrl_flag if the ctrl key is pressed.'''
-    # print('{0} pressed'.format(key))
-    if key == Key.ctrl:
-        S.ctrl_flag = True
-
-def on_release(S, key):
-    ''' Tracks keypresses. Unsets ctrl_flag if the ctrl key is released.'''
-    # print('{0} release'.format(key))
-    if key == Key.ctrl:
-        S.ctrl_flag = False
-    if key == Key.esc:
-        # Stop listener
-        return False
-
-def start_key_listener(S):
-    ''' Starts the keypress listener. '''
-    # Wrapping on_press and on_release into higher order functions
-    # to avoid use of global variables
-    on_press_key = partial(on_press, S)
-    on_release_key = partial(on_release, S)
-
-    # Start the listener on another thread to listen to keypress events
-    listener = Listener(on_press=on_press_key,
-                        on_release=on_release_key)
-    listener.start()
+from .proto import landmarkList_pb2
+from .config import Config, State
+from .mouse_tracker import mouse_track, calc_pointer
+from .util.utils import on_press, on_release, start_key_listener
+from .recognizer import format_landmark, get_gesture
+from .executor import pose_action
 
 
 def get_landmarks(data, landmark_list):
@@ -128,22 +98,20 @@ def handle_stream(args):
     sock.bind((HOST, PORT))
     sock.listen(1)
 
-    while True:
-        # Establish connection
-        conn, addr = sock.accept()
-        while True:
-            data = conn.recv(4096)
-            try:
-                process_data(data, landmark_list, C, S)
-            except ValueError as v:
-                print(v)
-                print("Closing Connection")
-                break
-            # The key listener thread has shut down, leaving only MainThread
-            if threading.active_count() == 1:
-                break
-        conn.close()
-    sock.close()
+    try:
+        while True: # Run server
+            conn, addr = sock.accept()
+            while True: # While connection is open
+                data = conn.recv(4096)
+                try:
+                    process_data(data, landmark_list, C, S)
+                except ValueError as v:
+                    print("Closing Connection: ", v)
+                    break
+            conn.close()
+        sock.close()
+    except KeyboardInterrupt:
+        print("\nGracefully shutting down")
 
 if __name__ == "__main__":
     # Program runs on two threads
