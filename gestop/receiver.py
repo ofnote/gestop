@@ -98,6 +98,7 @@ def handle_stream(args):
     sock.bind((HOST, PORT))
     sock.listen(1)
 
+    logging.info('Receiver is ready!')
     try:
         while True: # Run server
             conn, addr = sock.accept()
