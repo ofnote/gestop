@@ -14,7 +14,8 @@ In addition, it is possible to extend and customize the functionality of the app
 2. Create custom functionality through the use of either python functions or shell scripts.
 3. Collect data and create your own custom gestures to use with existing gestures. 
 
-[![Demo video link](images/gestop.gif)](https://www.youtube.com/watch?v=K2UkIjK7BTI "Demo Video Link")
+### Demo (Click on the image to see the full video)
+[![Demo video link](images/gestop.gif)](https://www.youtube.com/watch?v=K2UkIjK7BTI)
 
 ### [Static and Dynamic Gestures Dataset link](https://drive.google.com/drive/folders/1zMFQVKvpAhU-EKGxQNyFXKTu1TgBH23L?usp=sharing)
 
