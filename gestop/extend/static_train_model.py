@@ -120,6 +120,7 @@ def main():
     static_net = StaticNet(C.static_input_dim, C.static_output_classes, C.static_gesture_mapping)
 
     early_stopping = EarlyStopping(
+        monitor='val_loss',
         patience=3,
         verbose=True,
     )
@@ -132,7 +133,7 @@ def main():
                       deterministic=True,
                       logger=wandb_logger,
                       min_epochs=C.min_epochs,
-                      early_stop_callback=early_stopping)
+                      callbacks=[early_stopping])
     trainer.fit(static_net, train_loader, test_loader)
     trainer.test(static_net, test_dataloaders=test_loader)
 
