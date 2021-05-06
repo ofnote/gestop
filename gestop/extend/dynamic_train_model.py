@@ -292,13 +292,14 @@ def main():
         model.apply(init_weights)
 
     early_stopping = EarlyStopping(
+        monitor='val_loss',
         patience=5,
         verbose=True,
     )
 
     # No name is given as a command line flag.
     if args.exp_name is None:
-        args.exp_name = "default"
+        args.exp_name = "dynamic_net"
 
     wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
                                           name=args.exp_name,
@@ -309,7 +310,7 @@ def main():
                       logger=wandb_logger,
                       min_epochs=20,
                       accumulate_grad_batches=C.grad_accum,
-                      early_stop_callback=early_stopping)
+                      callbacks=[early_stopping])
 
     trainer.fit(model, train_loader, val_loader)
 
