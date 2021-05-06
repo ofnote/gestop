@@ -6,6 +6,7 @@ To be run repeatedly for each gesture
 
 import logging
 import socket
+from google import protobuf
 from ..proto import landmarkList_pb2
 from ..config import setup_logger
 from ..util.utils import update_static_mapping
@@ -83,7 +84,7 @@ def main():
 
         try:
             landmark_list.ParseFromString(data)
-        except google.protobuf.message.DecodeError: # Incorrect data format
+        except protobuf.message.DecodeError: # Incorrect data format
             continue
         landmarks = []
         for lmark in landmark_list.landmark:
