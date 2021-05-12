@@ -5,11 +5,11 @@ Interfaces with the gesture recognizer and the gesture executor modules.
 
 import argparse
 import logging
-
+import os
 import socket
 
 from .proto import landmarkList_pb2
-from .config import Config, State
+from .config import Config, State, package_directory
 from .mouse_tracker import mouse_track, calc_pointer
 from .util.utils import on_press, on_release, start_key_listener
 from .recognizer import format_landmark, get_gesture
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
                         dest="mouse_track", action='store_false')
     parser.add_argument("--config-path", help="Path to custom configuration file",
-                        type=str, default="gestop/data/action_config.json")
+                        type=str, default=os.path.join(package_directory, "data/action_config.json"))
     parser.add_argument("--no-action", help="Disbaled execution of actions. Useful for debugging.",
                         dest="exec_action", action='store_false')
     args = parser.parse_args()

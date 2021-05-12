@@ -15,6 +15,8 @@ from pynput.mouse import Controller
 from .model import StaticNet, DynamicNet
 from .user_config import UserConfig
 
+package_directory = os.path.dirname(os.path.abspath(__file__))
+
 def get_screen_resolution():
     ''' OS independent way of getting screen resolution. Adapted from pyautogui. '''
     if platform == 'linux':
@@ -39,8 +41,8 @@ def setup_logger():
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler("gestop/logs/debug{}.log".format(
-                datetime.datetime.now().strftime("%m.%d:%H.%M.%S"))),
+            logging.FileHandler(os.path.join(package_directory, "logs/debug{}.log".format(
+                datetime.datetime.now().strftime("%m.%d:%H.%M.%S")))),
             logging.StreamHandler(stdout)
         ]
     )
@@ -59,8 +61,8 @@ class Config:
     else:
         map_location = None
 
-    if not os.path.exists('gestop/logs'):
-        os.mkdir('gestop/logs')
+    if not os.path.exists(os.path.join(package_directory, 'logs')):
+        os.mkdir(os.path.join(package_directory, 'logs'))
 
     setup_logger()
 
@@ -69,7 +71,7 @@ class Config:
     lite: bool
 
     # Path to action configuration file
-    config_path: str = 'gestop/data/action_config.json'
+    config_path: str = os.path.join(package_directory, 'data/action_config.json')
 
     # Refer make_vector() in train_model.py to verify input dimensions
     static_input_dim: int = 49
@@ -98,8 +100,8 @@ class Config:
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)
 
-    static_path: str = 'gestop/models/static_net.pth'
-    dynamic_path: str = 'gestop/models/dynamic_net.pth'
+    static_path: str = os.path.join(package_directory, 'models/static_net.pth')
+    dynamic_path: str = os.path.join(package_directory, 'models/dynamic_net.pth')
 
     static_net: StaticNet = field(init=False)
     dynamic_net: DynamicNet = field(init=False)
@@ -120,10 +122,10 @@ class Config:
 
     def __post_init__(self):
         # Fetching gesture mappings
-        with open('gestop/data/static_gesture_mapping.json', 'r') as jsonfile:
+        with open(os.path.join(package_directory, 'data/static_gesture_mapping.json'), 'r') as jsonfile:
             self.static_gesture_mapping = json.load(jsonfile)
             self.static_output_classes = len(self.static_gesture_mapping)
-        with open('gestop/data/dynamic_gesture_mapping.json', 'r') as jsonfile:
+        with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)
             self.dynamic_output_classes = len(self.dynamic_gesture_mapping)
 
