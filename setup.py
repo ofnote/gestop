@@ -31,7 +31,14 @@ setuptools.setup(name='gestop',
           'Topic :: Software Development',
           'Topic :: Scientific/Engineering :: Artificial Intelligence'
           ],
-
-      setup_requires=['mediapipe', 'torch', 'pytorch-lightning'],
-      install_requires=['mediapipe', 'torch'],
+      install_requires=['mediapipe', 
+                        'torch', 
+                        'torchvision',
+                        'pytorch-lightning',
+                        'pynput',
+                        'sklearn',
+                        'matplotlib',
+                        'protobuf',
+                        'pandas'
+                        ]
       )
