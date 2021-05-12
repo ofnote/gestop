@@ -6,9 +6,10 @@ To be run repeatedly for each gesture
 
 import logging
 import socket
+import os
 from google import protobuf
 from ..proto import landmarkList_pb2
-from ..config import setup_logger
+from ..config import setup_logger, package_directory
 from ..util.utils import update_static_mapping
 
 def dataset_headers():
@@ -68,7 +69,7 @@ def main():
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple one word description of the orientation of your hand) :\n")
 
-    f = open("gestop/data/static_gestures_data.csv", 'a+')
+    f = open(os.path.join(package_directory, "data/static_gestures_data.csv"), 'a+')
     #set pointer at beginning of file
     f.seek(0)
 

@@ -19,7 +19,7 @@ from pytorch_lightning import loggers as pl_loggers
 
 from ..model import DynamicNet, init_weights, variable_length_collate
 from ..dataset import DynamicDataset
-from ..config import Config, get_seed
+from ..config import Config, get_seed, package_directory
 from ..util.utils import calc_polar, init_seed
 
 def normalize(seq):
@@ -180,14 +180,14 @@ def read_shrec_data(base_directory):
                     target_arr.append(gesture_no)
         gesture_no += 1
 
-    with open('gestop/data/shrec_gesture_mapping.json', 'r') as jsonfile:
+    with open(os.path.join(package_directory, 'data/shrec_gesture_mapping.json'), 'r') as jsonfile:
         shrec_dict = json.load(jsonfile)
 
     return gesture_arr, target_arr, shrec_dict
 
 def read_user_data():
     ''' Reads the user collected data. '''
-    base_directory = "gestop/data/dynamic_gestures"
+    base_directory = os.path.join(package_directory, "data/dynamic_gestures")
     if not os.path.exists(base_directory):
         os.mkdir(base_directory)
 
@@ -243,11 +243,11 @@ def main():
     # INPUT PIPELINE #
     ##################
 
-    with open('gestop/data/dynamic_gesture_mapping.json', 'r') as f:
+    with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'r') as f:
         old_gesture_mapping = json.load(f) # Keep old mapping in case we pretrain
         old_output_classes = len(old_gesture_mapping)
     train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory)
-    with open('gestop/data/dynamic_gesture_mapping.json', 'w') as f:
+    with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'w') as f:
         f.write(json.dumps(gesture_mapping)) # Store new mapping
 
     C = Config(lite=True)
@@ -301,7 +301,7 @@ def main():
     if args.exp_name is None:
         args.exp_name = "dynamic_net"
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir=os.path.join(package_directory, 'logs/'),
                                           name=args.exp_name,
                                           project='gestop')
 

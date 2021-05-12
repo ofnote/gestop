@@ -4,6 +4,7 @@ Describes the implementation of the training procedure for gesture net
 import torch
 import pandas as pd
 import numpy as np
+import os
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -12,7 +13,7 @@ from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
 from ..model import StaticNet
 from ..dataset import StaticDataset
-from ..config import Config, get_seed
+from ..config import Config, get_seed, package_directory
 from ..util.utils import update_static_mapping, init_seed
 
 def split_dataframe(data):
@@ -102,7 +103,7 @@ def main():
     ##################
 
     # Read and format the csv
-    df = pd.read_csv("gestop/data/static_gestures_data.csv")
+    df = pd.read_csv(os.path.join(package_directory, "data/static_gestures_data.csv"))
     train, test = train_test_split(df, test_size=0.1, random_state=get_seed())
     train_X, train_Y = split_dataframe(train)
     test_X, test_Y = split_dataframe(test)
@@ -125,7 +126,7 @@ def main():
         verbose=True,
     )
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir=os.path.join(package_directory, 'logs/'),
                                           name='static_net',
                                           project='gestop')
 

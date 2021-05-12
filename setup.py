@@ -32,13 +32,14 @@ setuptools.setup(name='gestop',
           'Topic :: Scientific/Engineering :: Artificial Intelligence'
           ],
       install_requires=['mediapipe', 
+                        'matplotlib',
+                        'pandas',
+                        'protobuf',
+                        'pynput',
+                        'pytorch-lightning',
+                        'sklearn',
                         'torch', 
                         'torchvision',
-                        'pytorch-lightning',
-                        'pynput',
-                        'sklearn',
-                        'matplotlib',
-                        'protobuf',
-                        'pandas'
+                        'wandb'
                         ]
       )

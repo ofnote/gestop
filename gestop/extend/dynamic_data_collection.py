@@ -9,7 +9,7 @@ import os
 import socket
 import threading
 from ..proto import landmarkList_pb2
-from ..config import State
+from ..config import State, package_directory
 from ..util.utils import start_key_listener
 
 def main():
@@ -37,7 +37,7 @@ def main():
 
     logging.info("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
 
-    path = "gestop/data/dynamic_gestures/" + gesture
+    path = os.path.join(package_directory, "data/dynamic_gestures/", gesture)
     if not os.path.exists(path):
         os.mkdir(path)
 
