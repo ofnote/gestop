@@ -6,6 +6,7 @@ Trains the network and saves it to disk.
 
 import os
 import argparse
+import logging
 from functools import partial
 import json
 import numpy as np
@@ -185,16 +186,16 @@ def read_shrec_data(base_directory):
 
     return gesture_arr, target_arr, shrec_dict
 
-def read_user_data():
+def read_user_data(base_directory):
     ''' Reads the user collected data. '''
-    base_directory = os.path.join(package_directory, "data/dynamic_gestures")
-    if not os.path.exists(base_directory):
-        os.mkdir(base_directory)
 
     gesture_arr = []
     target_arr = []
     gesture_no = 14 #no. of gestures in SHREC
     user_dict = {}
+
+    if base_directory is None:
+        return gesture_arr, target_arr, user_dict
 
     for gesture in os.listdir(base_directory): # for each gesture
         for g in os.listdir(base_directory+'/'+gesture):
@@ -206,10 +207,10 @@ def read_user_data():
 
     return gesture_arr, target_arr, user_dict
 
-def read_data(seed_val, base_directory):
+def read_data(seed_val, shrec_directory, user_directory):
     ''' Read both user data and SHREC data. '''
-    gesture_shrec, target_shrec, shrec_dict = read_shrec_data(base_directory)
-    gesture_user, target_user, user_dict = read_user_data()
+    gesture_shrec, target_shrec, shrec_dict = read_shrec_data(shrec_directory)
+    gesture_user, target_user, user_dict = read_user_data(user_directory)
 
     shrec_dict.update(user_dict)
 
@@ -233,6 +234,7 @@ def main():
     to recognize dynamic hand gestures.')
     parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
     parser.add_argument("--shrec-directory", help="The directory of SHREC.", required=True)
+    parser.add_argument("--user-directory", help="The directory in which user collected gesture data is stored.")
     parser.add_argument("--use-pretrained", help="Use pretrained model.",
                         dest="pretrained", action="store_true")
 
@@ -246,7 +248,8 @@ def main():
     with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'r') as f:
         old_gesture_mapping = json.load(f) # Keep old mapping in case we pretrain
         old_output_classes = len(old_gesture_mapping)
-    train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory)
+    train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory, args.user_directory)
+    logging.info(gesture_mapping)
     with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'w') as f:
         f.write(json.dumps(gesture_mapping)) # Store new mapping
 
