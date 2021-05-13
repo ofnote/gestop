@@ -40,11 +40,11 @@ def start_key_listener(S):
                         on_release=on_release_key)
     listener.start()
 
-def update_static_mapping():
+def update_static_mapping(static_gesture_filepath):
     '''
     Fit the LabelEncoder on static gesture data and write mapping to disk
     '''
-    data = pd.read_csv(os.path.join(package_directory, "data/static_gestures_data.csv"))
+    data = pd.read_csv(static_gesture_filepath)
     data = data['GESTURE']
     le = LabelEncoder()
     le.fit(data)

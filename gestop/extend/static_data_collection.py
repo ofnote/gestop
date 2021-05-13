@@ -6,7 +6,7 @@ To be run repeatedly for each gesture
 
 import logging
 import socket
-import os
+import argparse
 from google import protobuf
 from ..proto import landmarkList_pb2
 from ..config import setup_logger, package_directory
@@ -44,9 +44,17 @@ def add_row(landmarks, handedness, gesture, actual_hand, ROWS_ADDED):
 def main():
     ''' Main '''
 
+    parser = argparse.ArgumentParser(description='A program to collect static hand gesture data to train a neural network.')
+    parser.add_argument("--nsamples", help="The number of samples of data to collect in one run.", 
+                        default=1000, type=int)
+    parser.add_argument("--static-gesture-filepath", help="Path to the file containing existing static gestures or \
+                        path to new file to add gesture data.", required=True)
+
+    args = parser.parse_args()
+
     # no. of samples added and number of samples being collected
     ROWS_ADDED = 0
-    NSAMPLES = 1000
+    NSAMPLES = args.nsamples
 
     # setup socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -69,7 +77,7 @@ def main():
     gesture = input("Enter the name of the gesture for which you are capturing data, \
     (a simple one word description of the orientation of your hand) :\n")
 
-    f = open(os.path.join(package_directory, "data/static_gestures_data.csv"), 'a+')
+    f = open(args.static_gesture_filepath, 'a+')
     #set pointer at beginning of file
     f.seek(0)
 
@@ -109,8 +117,6 @@ def main():
     f.write(DATASET_STR)
     f.close()
     logging.info("1000 rows of data has been successfully collected.")
-
-    update_static_mapping()
 
 if __name__ =='__main__':
     main()
