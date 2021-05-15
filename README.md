@@ -19,30 +19,33 @@ In addition, it is possible to extend and customize the functionality of the app
 
 ### [Static and Dynamic Gestures Dataset link](https://drive.google.com/drive/folders/1zMFQVKvpAhU-EKGxQNyFXKTu1TgBH23L?usp=sharing)
 
-### Usage
+### Installation
 
-In addition to the Python libraries in `requirements.txt`, [OpenCV](https://opencv.org/) and [xdotool](https://github.com/jordansissel/xdotool) are also required by Gestop.
+Installation using `pip` inside a virtual environment is highly recommended. To do so:
+
+``` python
+python -m venv env
+source env/bin/activate
+pip install gestop
+```
+
+In addition to the Python dependencies, [OpenCV](https://opencv.org/) and [xdotool](https://github.com/jordansissel/xdotool) are also required by Gestop.
+
+### Usage
 
 #### Server
 
-To start the **Gestop** server, do the following:
-
-1. Clone this repo and install all its dependencies.
-2. Inside the `gestop` directory, start the server with the following command:
+To start the **Gestop** server:
 
 ``` python
 python -m gestop.receiver
 ```
-
-*Note:* Python dependencies can be installed by creating a virtual environment and running `pip install -r requirements.txt`
 
 #### Client
 
 The client, or the *keypoint generator*, can be setup either through MediaPipe's C++ API, or through its Python API. The Python API is simpler to setup and is recommended.
 
 #### MediaPipe Python API
-
-Install the libraries required by the Python API i.e. **opencv** and **mediapipe**. Then, run the code with:
 
 ``` python
 python -m gestop.keypoint_gen.hand_tracking
@@ -97,6 +100,8 @@ The project consists of a few distinct pieces which are:
 ### [Customizing Gestop](CUSTOMIZATION.md)
 
 ### [Available Gestures](GESTURES.md)
+
+### [API Reference](API_REFERENCE.md)
 
 ### Useful Information
 
