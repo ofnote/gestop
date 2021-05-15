@@ -25,14 +25,14 @@ class UserConfig:
 
     def inc_volume(self, S):
         ''' Increase system volume. '''
-        self.keyboard.press(KeyCode.from_vk(269025043))
-        self.keyboard.release(KeyCode.from_vk(269025043))
+        self.keyboard.press(Key.media_volume_up)
+        self.keyboard.release(Key.media_volume_up)
         return S
 
     def dec_volume(self, S):
         ''' Decrease system volume. '''
-        self.keyboard.press(KeyCode.from_vk(269025041))
-        self.keyboard.release(KeyCode.from_vk(269025041))
+        self.keyboard.press(Key.media_volume_down)
+        self.keyboard.release(Key.media_volume_down)
         return S
 
     def inc_brightness(self, S):
