@@ -64,7 +64,7 @@ threadpoolctl==2.1.0
 torch==1.6.0
 torchvision==0.7.0
 tqdm==4.48.2
-urllib3==1.25.10
+urllib3==1.26.5
 wandb==0.9.6
 watchdog==0.10.3
 Werkzeug==1.0.1
