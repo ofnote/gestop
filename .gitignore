@@ -1,3 +1,5 @@
 __pycache__
 logs
 env/
+dist/
+gestop.egg-info/
