@@ -1,6 +1,8 @@
 '''
 Describes the implementation of the training procedure for gesture net
 '''
+import os
+import argparse
 import torch
 import pandas as pd
 import numpy as np
@@ -12,7 +14,7 @@ from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning import loggers as pl_loggers
 from ..model import StaticNet
 from ..dataset import StaticDataset
-from ..config import Config, get_seed
+from ..config import Config, get_seed, package_directory
 from ..util.utils import update_static_mapping, init_seed
 
 def split_dataframe(data):
@@ -93,7 +95,12 @@ def calc_accuracy(ans, pred):
 def main():
     ''' Main '''
 
-    encoder = update_static_mapping() # Update the static mapping before initializing Config
+    parser = argparse.ArgumentParser(description='A program to train a neural network to detect static hand gestures.')
+    parser.add_argument("--static-gesture-filepath", help="Path to the file containing static gestures.", required=True)
+
+    args = parser.parse_args()
+
+    encoder = update_static_mapping(args.static_gesture_filepath) # Update the static mapping before initializing Config
     C = Config(lite=True)
     init_seed(get_seed())
 
@@ -102,7 +109,7 @@ def main():
     ##################
 
     # Read and format the csv
-    df = pd.read_csv("gestop/data/static_gestures_data.csv")
+    df = pd.read_csv(args.static_gesture_filepath)
     train, test = train_test_split(df, test_size=0.1, random_state=get_seed())
     train_X, train_Y = split_dataframe(train)
     test_X, test_Y = split_dataframe(test)
@@ -120,11 +127,12 @@ def main():
     static_net = StaticNet(C.static_input_dim, C.static_output_classes, C.static_gesture_mapping)
 
     early_stopping = EarlyStopping(
+        monitor='val_loss',
         patience=3,
         verbose=True,
     )
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir=os.path.join(package_directory, 'logs/'),
                                           name='static_net',
                                           project='gestop')
 
@@ -132,7 +140,7 @@ def main():
                       deterministic=True,
                       logger=wandb_logger,
                       min_epochs=C.min_epochs,
-                      early_stop_callback=early_stopping)
+                      callbacks=[early_stopping])
     trainer.fit(static_net, train_loader, test_loader)
     trainer.test(static_net, test_dataloaders=test_loader)
 

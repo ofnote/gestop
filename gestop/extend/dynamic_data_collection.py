@@ -6,14 +6,20 @@ To be run repeatedly for each gesture.
 
 import logging
 import os
+import argparse
 import socket
 import threading
 from ..proto import landmarkList_pb2
-from ..config import State
+from ..config import State, package_directory
 from ..util.utils import start_key_listener
 
 def main():
     ''' Main '''
+
+    parser = argparse.ArgumentParser(description='A program to collect dynamic hand gesture data to train a neural network.')
+    parser.add_argument("--user-gesture-directory", help="The directory in which gesture data should be stored. \
+                        Created if it does not exist. Each gesture is stored in a separate directory inside this one.", required=True)
+    args = parser.parse_args()
 
     # using None because arguments are irrelevant
     S = State(None, None)
@@ -37,9 +43,9 @@ def main():
 
     logging.info("Hold and release the Ctrl key to record one gesture. Hit the Esc key to stop recording.")
 
-    path = "gestop/data/dynamic_gestures/" + gesture
-    if not os.path.exists(path):
-        os.mkdir(path)
+    if not os.path.exists(args.user_gesture_directory): os.mkdir(args.user_gesture_directory)
+    if not os.path.exists(os.path.join(args.user_gesture_directory, gesture)):
+        os.mkdir(os.path.join(args.user_gesture_directory, gesture))
 
     count = 1
     start_key_listener(S)
@@ -59,7 +65,7 @@ def main():
 
         # if there is data recorded
         if len(keypoint_buffer) != 0 and not S.ctrl_flag:
-            fname = path + "/" + gesture + str(count) + ".txt"
+            fname = os.path.join(args.user_gesture_directory, gesture, '%s%s.txt' %(gesture, count))
             lmark_str = ''
             for i in keypoint_buffer:
                 # verifying data quality

@@ -6,6 +6,7 @@ Trains the network and saves it to disk.
 
 import os
 import argparse
+import logging
 from functools import partial
 import json
 import numpy as np
@@ -19,7 +20,7 @@ from pytorch_lightning import loggers as pl_loggers
 
 from ..model import DynamicNet, init_weights, variable_length_collate
 from ..dataset import DynamicDataset
-from ..config import Config, get_seed
+from ..config import Config, get_seed, package_directory
 from ..util.utils import calc_polar, init_seed
 
 def normalize(seq):
@@ -180,21 +181,21 @@ def read_shrec_data(base_directory):
                     target_arr.append(gesture_no)
         gesture_no += 1
 
-    with open('gestop/data/shrec_gesture_mapping.json', 'r') as jsonfile:
+    with open(os.path.join(package_directory, 'data/shrec_gesture_mapping.json'), 'r') as jsonfile:
         shrec_dict = json.load(jsonfile)
 
     return gesture_arr, target_arr, shrec_dict
 
-def read_user_data():
+def read_user_data(base_directory):
     ''' Reads the user collected data. '''
-    base_directory = "gestop/data/dynamic_gestures"
-    if not os.path.exists(base_directory):
-        os.mkdir(base_directory)
 
     gesture_arr = []
     target_arr = []
     gesture_no = 14 #no. of gestures in SHREC
     user_dict = {}
+
+    if base_directory is None:
+        return gesture_arr, target_arr, user_dict
 
     for gesture in os.listdir(base_directory): # for each gesture
         for g in os.listdir(base_directory+'/'+gesture):
@@ -206,10 +207,10 @@ def read_user_data():
 
     return gesture_arr, target_arr, user_dict
 
-def read_data(seed_val, base_directory):
+def read_data(seed_val, shrec_directory, user_directory):
     ''' Read both user data and SHREC data. '''
-    gesture_shrec, target_shrec, shrec_dict = read_shrec_data(base_directory)
-    gesture_user, target_user, user_dict = read_user_data()
+    gesture_shrec, target_shrec, shrec_dict = read_shrec_data(shrec_directory)
+    gesture_user, target_user, user_dict = read_user_data(user_directory)
 
     shrec_dict.update(user_dict)
 
@@ -233,6 +234,7 @@ def main():
     to recognize dynamic hand gestures.')
     parser.add_argument("--exp-name", help="The name with which to log the run.", type=str)
     parser.add_argument("--shrec-directory", help="The directory of SHREC.", required=True)
+    parser.add_argument("--user-directory", help="The directory in which user collected gesture data is stored.")
     parser.add_argument("--use-pretrained", help="Use pretrained model.",
                         dest="pretrained", action="store_true")
 
@@ -243,11 +245,12 @@ def main():
     # INPUT PIPELINE #
     ##################
 
-    with open('gestop/data/dynamic_gesture_mapping.json', 'r') as f:
+    with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'r') as f:
         old_gesture_mapping = json.load(f) # Keep old mapping in case we pretrain
         old_output_classes = len(old_gesture_mapping)
-    train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory)
-    with open('gestop/data/dynamic_gesture_mapping.json', 'w') as f:
+    train_x, test_x, train_y, test_y, gesture_mapping = read_data(get_seed(), args.shrec_directory, args.user_directory)
+    logging.info(gesture_mapping)
+    with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'w') as f:
         f.write(json.dumps(gesture_mapping)) # Store new mapping
 
     C = Config(lite=True)
@@ -292,15 +295,16 @@ def main():
         model.apply(init_weights)
 
     early_stopping = EarlyStopping(
+        monitor='val_loss',
         patience=5,
         verbose=True,
     )
 
     # No name is given as a command line flag.
     if args.exp_name is None:
-        args.exp_name = "default"
+        args.exp_name = "dynamic_net"
 
-    wandb_logger = pl_loggers.WandbLogger(save_dir='gestop/logs/',
+    wandb_logger = pl_loggers.WandbLogger(save_dir=os.path.join(package_directory, 'logs/'),
                                           name=args.exp_name,
                                           project='gestop')
 
@@ -309,7 +313,7 @@ def main():
                       logger=wandb_logger,
                       min_epochs=20,
                       accumulate_grad_batches=C.grad_accum,
-                      early_stop_callback=early_stopping)
+                      callbacks=[early_stopping])
 
     trainer.fit(model, train_loader, val_loader)
 

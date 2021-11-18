@@ -5,11 +5,11 @@ Interfaces with the gesture recognizer and the gesture executor modules.
 
 import argparse
 import logging
-
+import os
 import socket
 
 from .proto import landmarkList_pb2
-from .config import Config, State
+from .config import Config, State, package_directory
 from .mouse_tracker import mouse_track, calc_pointer
 from .util.utils import on_press, on_release, start_key_listener
 from .recognizer import format_landmark, get_gesture
@@ -69,7 +69,8 @@ def handle_and_recognize(landmarks, handedness, C, S):
 def all_init(args):
     ''' Initializing the state and the configuration. '''
 
-    C = Config(lite=False, config_path=args.config_path)
+    C = Config(lite=False, config_path_json=args.config_path_json,
+               config_path_py=args.config_path_py)
     S = State(mouse_track=args.mouse_track, exec_action=args.exec_action)
 
     start_key_listener(S)
@@ -125,8 +126,10 @@ if __name__ == "__main__":
     desktop through hand gestures.')
     parser.add_argument("--no-mouse-track", help="Do not track mouse on startup",
                         dest="mouse_track", action='store_false')
-    parser.add_argument("--config-path", help="Path to custom configuration file",
-                        type=str, default="gestop/data/action_config.json")
+    parser.add_argument("--config-path-json", help="Path to custom json configuration file",
+                        type=str, default=os.path.join(package_directory, "data/action_config.json"))
+    parser.add_argument("--config-path-py", help="Path to custom python configuration file",
+                        type=str, default=os.path.join(package_directory, "user_config.py"))
     parser.add_argument("--no-action", help="Disbaled execution of actions. Useful for debugging.",
                         dest="exec_action", action='store_false')
     args = parser.parse_args()

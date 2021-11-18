@@ -9,11 +9,14 @@ from sys import stdout, platform
 import os
 import datetime
 from typing import Dict, List, Tuple
+import importlib.util
 import torch
 from pynput.mouse import Controller
 
 from .model import StaticNet, DynamicNet
 from .user_config import UserConfig
+
+package_directory = os.path.dirname(os.path.abspath(__file__))
 
 def get_screen_resolution():
     ''' OS independent way of getting screen resolution. Adapted from pyautogui. '''
@@ -39,8 +42,8 @@ def setup_logger():
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler("gestop/logs/debug{}.log".format(
-                datetime.datetime.now().strftime("%m.%d:%H.%M.%S"))),
+            logging.FileHandler(os.path.join(package_directory, "logs/debug{}.log".format(
+                datetime.datetime.now().strftime("%m.%d:%H.%M.%S")))),
             logging.StreamHandler(stdout)
         ]
     )
@@ -59,8 +62,8 @@ class Config:
     else:
         map_location = None
 
-    if not os.path.exists('gestop/logs'):
-        os.mkdir('gestop/logs')
+    if not os.path.exists(os.path.join(package_directory, 'logs')):
+        os.mkdir(os.path.join(package_directory, 'logs'))
 
     setup_logger()
 
@@ -68,8 +71,11 @@ class Config:
     # This is useful in scripts which do not use the network, or may modify the network.
     lite: bool
 
-    # Path to action configuration file
-    config_path: str = 'gestop/data/action_config.json'
+    # Path to action configuration file (json)
+    config_path_json: str = os.path.join(package_directory, 'data/action_config.json')
+
+    # Path to action configuration file (py)
+    config_path_py: str = os.path.join(package_directory, 'user_config.py')
 
     # Refer make_vector() in train_model.py to verify input dimensions
     static_input_dim: int = 49
@@ -98,8 +104,8 @@ class Config:
     # Mapping of gestures to actions
     gesture_action_mapping: dict = field(default_factory=dict)
 
-    static_path: str = 'gestop/models/static_net.pth'
-    dynamic_path: str = 'gestop/models/dynamic_net.pth'
+    static_path: str = os.path.join(package_directory, 'models/static_net.pth')
+    dynamic_path: str = os.path.join(package_directory, 'models/dynamic_net.pth')
 
     static_net: StaticNet = field(init=False)
     dynamic_net: DynamicNet = field(init=False)
@@ -119,19 +125,25 @@ class Config:
     user_config: UserConfig = field(init=False)
 
     def __post_init__(self):
+        logging.info("Package Directory: %s" %package_directory)
+
         # Fetching gesture mappings
-        with open('gestop/data/static_gesture_mapping.json', 'r') as jsonfile:
+        with open(os.path.join(package_directory, 'data/static_gesture_mapping.json'), 'r') as jsonfile:
             self.static_gesture_mapping = json.load(jsonfile)
             self.static_output_classes = len(self.static_gesture_mapping)
-        with open('gestop/data/dynamic_gesture_mapping.json', 'r') as jsonfile:
+        with open(os.path.join(package_directory, 'data/dynamic_gesture_mapping.json'), 'r') as jsonfile:
             self.dynamic_gesture_mapping = json.load(jsonfile)
             self.dynamic_output_classes = len(self.dynamic_gesture_mapping)
 
-        with open(self.config_path, 'r') as jsonfile:
+        with open(self.config_path_json, 'r') as jsonfile:
             self.gesture_action_mapping = json.load(jsonfile)
 
         self.mouse = Controller()
-        self.user_config = UserConfig()
+
+        user_config_spec = importlib.util.spec_from_file_location("user_config", self.config_path_py)
+        user_config = importlib.util.module_from_spec(user_config_spec)
+        user_config_spec.loader.exec_module(user_config)
+        self.user_config = user_config.UserConfig()
 
         # Setting up networks
         if not self.lite:

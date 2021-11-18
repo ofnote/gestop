@@ -6,11 +6,13 @@ import math
 from functools import partial
 import logging
 import json
+import os
 from pynput.keyboard import Listener, Key
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 import numpy as np
 import torch
+from ..config import package_directory
 
 def calc_polar(x,y):
     ''' Calculate the polar form of the Cartesian coordinates x and y. '''
@@ -38,11 +40,11 @@ def start_key_listener(S):
                         on_release=on_release_key)
     listener.start()
 
-def update_static_mapping():
+def update_static_mapping(static_gesture_filepath):
     '''
     Fit the LabelEncoder on static gesture data and write mapping to disk
     '''
-    data = pd.read_csv("gestop/data/static_gestures_data.csv")
+    data = pd.read_csv(static_gesture_filepath)
     data = data['GESTURE']
     le = LabelEncoder()
     le.fit(data)
@@ -50,7 +52,7 @@ def update_static_mapping():
     # Store mapping to disk
     le_name_mapping = dict(zip([int(i) for i in le.transform(le.classes_)], le.classes_))
     logging.info(le_name_mapping)
-    with open('gestop/data/static_gesture_mapping.json', 'w') as f:
+    with open(os.path.join(package_directory, "data/static_gesture_mapping.json"), 'w') as f:
         f.write(json.dumps(le_name_mapping))
 
     return le

@@ -54,7 +54,8 @@ while cap.isOpened():
             l.z = lmark.z*256
 
         output = landmarkList.SerializeToString()
-        sock.send(output)
+        try: sock.send(output)
+        except BrokenPipeError: break
 
         mp_drawing.draw_landmarks(
               image, hand_landmarks, mp_hands.HAND_CONNECTIONS)

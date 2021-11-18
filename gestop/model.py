@@ -33,10 +33,7 @@ class StaticNet(LightningModule):
         x, y = batch
 
         output = self(x.float())
-
-        loss = F.cross_entropy(output, y.long())
-        logs = {'train_loss': loss}
-        return {'loss': loss, 'log': logs}
+        return {'loss': F.cross_entropy(output, y.long())}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
@@ -45,15 +42,13 @@ class StaticNet(LightningModule):
         x, y = batch
 
         output = self(x.float())
-
-        return {'val_loss': F.cross_entropy(output, y.long()),
-                'val_acc': torch.argmax(output, axis=1) == y}
+        return {'val_step_loss': F.cross_entropy(output, y.long()),
+                'val_step_acc': torch.argmax(output, axis=1) == y}
 
     def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        avg_acc = torch.cat([x['val_acc'] for x in outputs]).float().mean()
-        logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
-        return {'val_loss': avg_loss, 'log': logs}
+        avg_loss = torch.stack([x['val_step_loss'] for x in outputs]).mean()
+        avg_acc = torch.cat([x['val_step_acc'] for x in outputs]).float().mean()
+        self.log_dict({'val_loss': avg_loss, 'val_acc': avg_acc})
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -94,8 +89,6 @@ class StaticNet(LightningModule):
         self.logger.experiment.log({"confusion_matrix":disp.figure_})
         self.logger.log_metrics(metrics)
         self.logger.log_metrics(report)
-
-        return metrics
 
 class DynamicNet(LightningModule):
     '''
@@ -147,8 +140,7 @@ class DynamicNet(LightningModule):
 
     def training_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
-        logs = {'train_loss': avg_loss}
-        return {'train_loss': avg_loss, 'log':logs}
+        self.log('train_loss', avg_loss)
 
     def validation_step(self, batch, batch_idx):
         # x, y, data_len = batch
@@ -167,8 +159,7 @@ class DynamicNet(LightningModule):
 
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         avg_acc = torch.cat([x['val_acc'] for x in outputs]).float().mean()
-        logs = {'val_loss': avg_loss, 'val_acc': avg_acc}
-        return {'val_loss': avg_loss, 'log': logs}
+        self.log_dict({'val_loss': avg_loss, 'val_acc': avg_acc})
 
     def test_step(self, batch, batch_idx):
         # x, y, data_len = batch
