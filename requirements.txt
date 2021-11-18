@@ -63,7 +63,7 @@ torchmetrics==0.2.0
 torchvision==0.9.1
 tqdm==4.60.0
 typing-extensions==3.10.0.0
-urllib3==1.26.4
+urllib3==1.26.5
 wandb==0.10.29
 Werkzeug==1.0.1
 yarl==1.6.3
