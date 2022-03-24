@@ -34,7 +34,7 @@ Markdown==3.3.4
 matplotlib==3.4.1
 mediapipe==0.8.3.1
 multidict==5.1.0
-numpy==1.20.2
+numpy==1.21.0
 oauthlib==3.1.0
 opencv-python==4.5.1.48
 packaging==20.9
