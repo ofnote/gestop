@@ -44,7 +44,7 @@ pep517==0.12.0
 Pillow==9.0.1
 pkginfo==1.7.1
 promise==2.3
-protobuf==3.15.8
+protobuf==3.18.3
 psutil==5.8.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
