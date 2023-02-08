@@ -11,7 +11,7 @@ chardet==4.0.0
 click==7.1.2
 colorama==0.4.4
 configparser==5.0.2
-cryptography==35.0.0
+cryptography==39.0.1
 cycler==0.10.0
 dataclasses==0.6
 docker-pycreds==0.4.0
