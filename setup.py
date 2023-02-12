@@ -39,7 +39,7 @@ setuptools.setup(name='gestop',
                         'protobuf',
                         'pynput',
                         'pytorch-lightning',
-                        'sklearn',
+                        'scikit-learn',
                         'torch', 
                         'torchvision',
                         'wandb'
