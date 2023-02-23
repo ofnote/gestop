@@ -30,7 +30,7 @@ joblib==1.2.0
 keyring==23.13.1
 kiwisolver==1.4.4
 lightning-utilities==0.6.0.post0
-markdown-it-py==2.1.0
+markdown-it-py==2.2.0
 matplotlib==3.6.3
 mdurl==0.1.2
 mediapipe==0.9.1.0
